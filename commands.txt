@@ -1,0 +1,9 @@
+nvcc --version
+gcc --version
+module list
+module avail
+module load CUDA/12.1.1
+module load GCC/11.3.0
+conda env list
+conda activate "env"
+

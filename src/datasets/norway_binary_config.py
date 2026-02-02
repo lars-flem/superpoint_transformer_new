@@ -48,7 +48,7 @@ ID2TRAINID = np.full(256, 2, dtype=np.int64)  # default: ignored
 # 24= Snow             -> ignored (2)
 
 ID2TRAINID[2] = 0                  # Ground -> ground
-ID2TRAINID[9] = 0                  # Water -> ground
+ID2TRAINID[9] = 2                  # Water -> ignored
 ID2TRAINID[3] = 1                  # Low Vegetation -> not_ground
 ID2TRAINID[4] = 1                  # Medium Vegetation -> not_ground
 ID2TRAINID[5] = 1                  # High Vegetation -> not_ground

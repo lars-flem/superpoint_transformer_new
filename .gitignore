@@ -165,8 +165,7 @@ src/dependencies/
 *.so
 *.cmake
 *__pycache__*
-*.ipynb*
-notebooks/*
+logs/*
 local
 ckpt
 outputs

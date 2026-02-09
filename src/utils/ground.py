@@ -112,6 +112,24 @@ def single_plane_model(pos, random_state=0, residual_threshold=1e-3):
     :return:
     """
     assert is_xyz_tensor(pos)
+    
+    if len(pos)<3:
+        print("#"*100)
+        print("RAnzac wont work i simply create two extra points by copying the first point while adding to the x and y value")
+        # Take the first point
+        first_point = pos[0].unsqueeze(0).clone()
+        another_copy = first_point.clone()
+
+        #update the x and y values 
+        first_point[0][0]+=10
+        first_point[0][1]+=10
+        another_copy[0][0]-=10
+        another_copy[0][1]-=10
+
+        #apend the midified copy of the points
+        pos= torch.cat([pos,first_point,another_copy])
+        print("pos after adding two new points:"+str(pos))
+        print("#"*100)
 
     if pos.is_cpu:
         xy = pos[:, :2].cpu().numpy()

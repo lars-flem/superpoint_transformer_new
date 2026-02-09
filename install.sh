@@ -102,6 +102,7 @@ pip install plyfile
 pip install h5py
 pip install colorhash
 pip install seaborn
+pip install laspy[laszip]
 pip install numba
 pip install pytorch-lightning
 pip install pyrootutils

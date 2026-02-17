@@ -97,7 +97,30 @@ def filter_by_verticality(verticality, threshold):
     return verticality.squeeze() < threshold
 
 
-def single_plane_model(pos, random_state=0, residual_threshold=1e-3):
+def single_plane_model(pos, random_state=0, residual_threshold=1e-3, labels=None):
+    
+    
+    if len(pos)<3:
+        print("#"*100)
+        print("RAnzac wont work i simply create two extra points by copying the first point while adding to the x and y value")
+        # Take the first point
+        first_point = pos[0].unsqueeze(0).clone()
+        #print("first_point:"+str(first_point))
+        another_copy = first_point.clone()
+
+        #update the x and y values 
+        first_point[0][0]+=10
+        #print("first_point:"+str(first_point))
+        first_point[0][1]+=10
+        another_copy[0][0]-=10
+        another_copy[0][1]-=10
+
+        #apend the midified copy of the points
+        pos= torch.cat([pos,first_point,another_copy])
+        print("pos after adding two new points:"+str(pos))
+        print("#"*100)
+    
+    
     """Model the ground as a single plane using RANSAC.
 
     Returns a callable taking an XYZ tensor as input and returning the
@@ -112,24 +135,6 @@ def single_plane_model(pos, random_state=0, residual_threshold=1e-3):
     :return:
     """
     assert is_xyz_tensor(pos)
-    
-    if len(pos)<3:
-        print("#"*100)
-        print("RAnzac wont work i simply create two extra points by copying the first point while adding to the x and y value")
-        # Take the first point
-        first_point = pos[0].unsqueeze(0).clone()
-        another_copy = first_point.clone()
-
-        #update the x and y values 
-        first_point[0][0]+=10
-        first_point[0][1]+=10
-        another_copy[0][0]-=10
-        another_copy[0][1]-=10
-
-        #apend the midified copy of the points
-        pos= torch.cat([pos,first_point,another_copy])
-        print("pos after adding two new points:"+str(pos))
-        print("#"*100)
 
     if pos.is_cpu:
         xy = pos[:, :2].cpu().numpy()
@@ -156,6 +161,16 @@ def single_plane_model(pos, random_state=0, residual_threshold=1e-3):
             iterations_per_batch=100,
             epsilon=1e-8,
             device=pos.device)
+
+        if result is None:
+            print("[single_plane_model] plane_fit failed! pos shape:", pos.shape)
+            print("pos:", pos)
+            if labels is not None:
+                print("labels:", labels)
+            else:
+                print("labels: None (not provided)")
+            print("CLASS", pos.__class__)
+            raise RuntimeError("plane_fit returned None in single_plane_model!")
 
         # result.equation holds: [a, b, c, d] for ax + by + cz + d = 0
         w = result.equation[:-1]

@@ -6,7 +6,7 @@ _target_: src.datamodules.norway_binary.NorwayBinaryDataModule
 
 # These parameters are not actually used by the DataModule, but are used
 # here to facilitate model parameterization with config interpolation
-num_classes: 3
+num_classes: 2
 stuff_classes: [0, 1]
 trainval: False
 val_on_test: False

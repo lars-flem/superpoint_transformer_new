@@ -1,0 +1,32 @@
+# Example Optuna/ Hydra config for hyperparameter search
+# Save as configs/hparams_search/norway_binary_optuna.yaml
+
+# This config assumes you want to search over both training and datamodule params.
+# You can add/remove parameters as needed.
+
+# Use the 'optuna' sweeper
+hydra:
+  sweeper:
+    _target_: hydra_plugins.hydra_optuna_sweeper.optuna_sweeper.OptunaSweeper
+    sampler:
+      _target_: optuna.samplers.TPESampler
+      seed: 123
+    direction: maximize
+    n_trials: 30
+    n_jobs: 1
+    storage: null
+    study_name: norway_binary_optuna
+    params:
+      # Training params
+      trainer.max_epochs: range(100, 401, 100)
+      optim.lr: loguniform(1e-4, 1e-2)
+      optim.weight_decay: loguniform(1e-6, 1e-2)
+      # Example: batch size (if configurable)
+      datamodule.batch_size: choice(4, 8, 16, 32)
+      # Example: tile size (if configurable)
+      datamodule.tile_size: choice(64, 128, 256)
+      # Example: superpoint size (if configurable)
+      datamodule.superpoint_size: choice(32, 64, 128)
+
+# You must ensure that datamodule.tile_size and datamodule.superpoint_size are actually used in your datamodule/configs.
+# Remove or adjust params above to match your actual config structure.

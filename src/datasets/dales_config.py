@@ -27,56 +27,60 @@ OBJECTS_UNTAR_NAME = "DALESObjects"
 # The validation set was arbitrarily chosen as the x last train tiles:
 TILES = {
     'train': [
-        '5080_54435_new',
-        '5190_54400_new',
-        '5105_54460_new',
-        '5130_54355_new',
-        '5165_54395_new',
-        '5185_54390_new',
-        '5180_54435_new',
-        '5085_54320_new',
-        '5100_54495_new',
-        '5110_54320_new',
-        '5140_54445_new',
-        '5105_54405_new',
-        '5185_54485_new',
-        '5165_54390_new',
-        '5145_54460_new',
-        '5110_54460_new',
-        '5180_54485_new',
-        '5150_54340_new',
-        '5145_54405_new',
-        '5145_54470_new',
-        '5160_54330_new',
-        '5135_54495_new',
-        '5145_54480_new',
-        '5115_54480_new',
-        '5110_54495_new',
-        '5095_54440_new'],
+        '5080_54435',
+        '5190_54400',
+        '5105_54460',
+        '5130_54355',
+        '5165_54395',
+        '5185_54390',
+        '5180_54435',
+        '5085_54320',
+        '5100_54495',
+        '5110_54320',
+        '5140_54445',
+        '5105_54405',
+        '5185_54485',
+        '5165_54390',
+        '5145_54460',
+        '5110_54460',
+        '5180_54485',
+        '5150_54340',
+        '5145_54405',
+        '5145_54470',
+        '5160_54330',
+        '5135_54495',
+        '5145_54480',
+        '5115_54480',
+        '5110_54495',
+        '5095_54440'],
 
     'val': [
-        '5145_54340_new',
-        '5095_54455_new',
-        '5110_54475_new'],
+        '5145_54340',
+        '5095_54455',
+        '5110_54475'],
 
     'test': [
-        '5080_54470_new',
-        '5100_54440_new',
-        '5140_54390_new',
-        '5080_54400_new',
-        '5155_54335_new',
-        '5150_54325_new',
-        '5120_54445_new',
-        '5135_54435_new',
-        '5175_54395_new',
-        '5100_54490_new',
-        '5135_54430_new']}
+        '5080_54470',
+        '5100_54440',
+        '5140_54390',
+        '5080_54400',
+        '5155_54335',
+        '5150_54325',
+        '5120_54445',
+        '5135_54435',
+        '5175_54395',
+        '5100_54490',
+        '5135_54430']}
 
 
 ########################################################################
 #                                Labels                                #
 ########################################################################
 
+
+#Original DALES classes:
+
+"""
 DALES_NUM_CLASSES = 8
 
 ID2TRAINID = np.asarray([8, 0, 1, 2, 3, 4, 5, 6, 7])
@@ -107,3 +111,34 @@ CLASS_COLORS = np.asarray([
 MIN_OBJECT_SIZE = 100
 THING_CLASSES = [2, 3, 4, 5, 6, 7]
 STUFF_CLASSES = [i for i in range(DALES_NUM_CLASSES) if not i in THING_CLASSES]
+
+"""
+
+#Binary DALES classes (ground vs not_ground)
+
+DALES_NUM_CLASSES = 2
+
+ID2TRAINID = np.asarray([8, 0, 1, 2, 3, 4, 5, 6, 7])
+
+
+ID2TRAINID[0] = 0                  # Ground -> ground
+ID2TRAINID[1] = 1                  # Vegetation -> not_ground
+ID2TRAINID[2] = 1                  # Cars -> not_ground
+ID2TRAINID[3] = 1                  # Trucks -> not_ground
+ID2TRAINID[4] = 1                  # Power lines -> not_ground
+ID2TRAINID[5] = 1                  # Fences -> not_ground
+ID2TRAINID[6] = 1                  # Poles -> not_ground
+ID2TRAINID[7] = 1                  # Buildings -> not_ground
+ID2TRAINID[8] = 2                  # Unknown -> not_ground
+
+
+
+CLASS_NAMES = [
+    'Ground',
+    'Not Ground',
+    'Ignored']
+
+CLASS_COLORS = np.asarray([
+    [243, 214, 171],  # sunset
+    [ 70, 115,  66],  # fern green
+    [  0,   8, 116]])

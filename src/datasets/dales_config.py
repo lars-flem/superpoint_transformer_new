@@ -142,3 +142,7 @@ CLASS_COLORS = np.asarray([
     [243, 214, 171],  # sunset
     [ 70, 115,  66],  # fern green
     [  0,   8, 116]])
+
+MIN_OBJECT_SIZE = 100
+THING_CLASSES = [2, 3, 4, 5, 6, 7]
+STUFF_CLASSES = [i for i in range(DALES_NUM_CLASSES) if not i in THING_CLASSES]

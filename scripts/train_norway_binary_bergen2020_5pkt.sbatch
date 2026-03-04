@@ -22,13 +22,13 @@ conda activate spt
 
 cd /cluster/home/larshfle/superpoint_transformer_new
 
-python src/train.py \
-  experiment=semantic/dales \
-  datamodule=semantic/dales \
-  paths.data_dir=/cluster/home/larshfle/datasets/dales_ply \
-  trainer.check_val_every_n_epoch=5 \
-  callbacks.model_checkpoint.save_last=True \
-  callbacks.model_checkpoint.every_n_epochs=5 \
-  callbacks.model_checkpoint.monitor=null \
-  test=True \
-  logger=csv
+source ~/.bashrc && conda activate spt && cd /cluster/home/larshfle/superpoint_transformer_new && python src/train.py \
+    experiment=semantic/norway_binary \
+    datamodule=semantic/norway_binary \
+    paths.data_dir=/cluster/home/larshfle/datasets/norway_binary_testing \
+    trainer.check_val_every_n_epoch=5 \
+    callbacks.model_checkpoint.save_last=True \
+    callbacks.model_checkpoint.every_n_epochs=5 \
+    callbacks.model_checkpoint.monitor=null \
+    test=True \
+    logger=csv 2>&1 | tee /tmp/train_output.log

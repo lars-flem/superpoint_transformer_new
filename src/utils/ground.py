@@ -163,23 +163,34 @@ def single_plane_model(pos, random_state=0, residual_threshold=1e-3, labels=None
             device=pos.device)
 
         if result is None:
-            print("[single_plane_model] plane_fit failed! pos shape:", pos.shape)
-            print("pos:", pos)
-            if labels is not None:
-                print("labels:", labels)
-            else:
-                print("labels: None (not provided)")
-            print("CLASS", pos.__class__)
-            raise RuntimeError("plane_fit returned None in single_plane_model!")
+            # ADDED FALLBACK IN CASE RANSAC FAILS, WHICH HAPPENS WHEN THE POINT CLOUD IS TOO SMALL OR TOO NOISY
+            print("[single_plane_model] plane_fit failed! Falling back to sklearn RANSAC (CPU method)...")
+            
+            # Use the same method as CPU branch
+            xy = pos[:, :2].cpu().numpy()
+            z = pos[:, 2].cpu().numpy()
 
-        # result.equation holds: [a, b, c, d] for ax + by + cz + d = 0
-        w = result.equation[:-1]
-        b = result.equation[-1]
+            ransac = RANSACRegressor(
+                random_state=random_state,
+                residual_threshold=residual_threshold).fit(
+                xy, z)
 
-        def predict_elevation(pos_query):
-            assert is_xyz_tensor(pos_query)
-            delta_z = (torch.matmul(pos_query, w) + b) / w[2]
-            return delta_z
+            def predict_elevation(pos_query):
+                assert is_xyz_tensor(pos_query)
+                device = pos_query.device
+                xy = pos_query[:, :2]
+                z = pos_query[:, 2]
+                return z - torch.from_numpy(ransac.predict(xy.cpu().numpy())).to(device)
+            
+            return predict_elevation
+        else:
+            # result.equation holds: [a, b, c, d] for ax + by + cz + d = 0
+            w = result.equation[:-1]
+            b = result.equation[-1]
+            def predict_elevation(pos_query):
+                assert is_xyz_tensor(pos_query)
+                delta_z = (torch.matmul(pos_query, w) + b) / w[2]
+                return delta_z
 
     return predict_elevation
 

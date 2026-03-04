@@ -13,96 +13,97 @@ val_on_test: False
 xy_tiling: 2  # Deler opp i 2x2 tiles = 4x flere treningseksempler
 
 # Preprocessing - override default to use CPU for GroundElevation (sklearn RANSAC)
-pre_transform:
-    - transform: DataTo
-      params:
-        device: 'cuda'
-    - transform: SaveNodeIndex
-      params:
-        key: 'sub'
-    - transform: GridSampling3D
-      params:
-        size: ${datamodule.voxel}
-        hist_key: 'y'
-        hist_size: ${eval:'${datamodule.num_classes} + 1'}
-        inplace: True
-        chunk_size: 10000000
-    - transform: KNN
-      params:
-        k: ${datamodule.knn}
-        r_max: ${datamodule.knn_r}
-        verbose: False
-    - transform: PointFeatures
-      params:
-        keys: ${datamodule.point_hf_preprocess}
-        k_min: 1
-        k_step: ${datamodule.knn_step}
-        k_min_search: ${datamodule.knn_min_search}
-        overwrite: ${datamodule.point_hf_overwrite}
-    - transform: DataTo
-      params:
-        device: 'cpu'
-    - transform: GroundElevation
-      params:
-        model: 'ransac'
-        z_threshold: ${datamodule.ground_threshold}
-        xy_grid: ${datamodule.ground_xy_grid}
-        scale: ${datamodule.ground_scale}
-    - transform: DataTo
-      params:
-        device: 'cuda'
-    - transform: AdjacencyGraph
-      params:
-        k: ${datamodule.pcp_k_adjacency}
-        w: ${datamodule.pcp_w_adjacency}
-    - transform: ConnectIsolated
-      params:
-        k: 1
-    - transform: AddKeysTo
-      params:
-        keys: ${datamodule.partition_hf}
-        to: 'x'
-        delete_after: False
-    - transform: CutPursuitPartition
-      params:
-        regularization: ${datamodule.pcp_regularization}
-        spatial_weight: ${datamodule.pcp_spatial_weight}
-        k_adjacency: ${datamodule.pcp_k_adjacency}
-        cutoff: ${datamodule.pcp_cutoff}
-        iterations: ${datamodule.pcp_iterations}
-        edge_reduce: ${datamodule.pcp_edge_reduce}
-        parallel: True
-        verbose: False
-    - transform: NAGRemoveKeys
-      params:
-        level: 'all'
-        keys: 'x'
-    - transform: SegmentFeatures
-      params:
-        n_min: 32
-        n_max: 128
-        keys: ${datamodule.segment_base_hf_preprocess}
-        mean_keys: ${datamodule.segment_mean_hf_preprocess}
-        std_keys: ${datamodule.segment_std_hf_preprocess}
-        strict: False
-    - transform: RadiusHorizontalGraph
-      params:
-        k_min: ${datamodule.graph_k_min}
-        k_max: ${datamodule.graph_k_max}
-        gap: ${datamodule.graph_gap}
-        se_ratio: ${datamodule.graph_se_ratio}
-        se_min: ${datamodule.graph_se_min}
-        cycles: ${datamodule.graph_cycles}
-        margin: ${datamodule.graph_margin}
-        chunk_size: ${datamodule.graph_chunk}
-        halfspace_filter: True
-        bbox_filter: True
-        target_pc_flip: True
-        source_pc_sort: False
-        keys: ['mean_off', 'std_off', 'mean_dist' ]
-    - transform: NAGTo
-      params:
-        device: 'cpu'
+
+#pre_transform:
+#    - transform: DataTo
+#      params:
+#        device: 'cuda'
+#    - transform: SaveNodeIndex
+#      params:
+#        key: 'sub'
+#    - transform: GridSampling3D
+#      params:
+#        size: ${datamodule.voxel}
+#        hist_key: 'y'
+#        hist_size: ${eval:'${datamodule.num_classes} + 1'}
+#        inplace: True
+#        chunk_size: 10000000
+#    - transform: KNN
+#      params:
+#        k: ${datamodule.knn}
+#        r_max: ${datamodule.knn_r}
+#        verbose: False
+#    - transform: PointFeatures
+#      params:
+#        keys: ${datamodule.point_hf_preprocess}
+#        k_min: 1
+#        k_step: ${datamodule.knn_step}
+#        k_min_search: ${datamodule.knn_min_search}
+#        overwrite: ${datamodule.point_hf_overwrite}
+#    - transform: DataTo
+#      params:
+#        device: 'cpu'
+#    - transform: GroundElevation
+#      params:
+#        model: 'ransac'
+#        z_threshold: ${datamodule.ground_threshold}
+#        xy_grid: ${datamodule.ground_xy_grid}
+#        scale: ${datamodule.ground_scale}
+#    - transform: DataTo
+#      params:
+#        device: 'cuda'
+#    - transform: AdjacencyGraph
+#      params:
+#        k: ${datamodule.pcp_k_adjacency}
+#        w: ${datamodule.pcp_w_adjacency}
+#    - transform: ConnectIsolated
+#      params:
+#        k: 1
+#    - transform: AddKeysTo
+#      params:
+#        keys: ${datamodule.partition_hf}
+#        to: 'x'
+#        delete_after: False
+#    - transform: CutPursuitPartition
+#      params:
+#        regularization: ${datamodule.pcp_regularization}
+#        spatial_weight: ${datamodule.pcp_spatial_weight}
+#        k_adjacency: ${datamodule.pcp_k_adjacency}
+#        cutoff: ${datamodule.pcp_cutoff}
+#        iterations: ${datamodule.pcp_iterations}
+#        edge_reduce: ${datamodule.pcp_edge_reduce}
+#        parallel: True
+#        verbose: False
+#    - transform: NAGRemoveKeys
+#      params:
+#        level: 'all'
+#        keys: 'x'
+#    - transform: SegmentFeatures
+#      params:
+#        n_min: 32
+#        n_max: 128
+#        keys: ${datamodule.segment_base_hf_preprocess}
+#        mean_keys: ${datamodule.segment_mean_hf_preprocess}
+#        std_keys: ${datamodule.segment_std_hf_preprocess}
+#        strict: False
+#    - transform: RadiusHorizontalGraph
+#      params:
+#        k_min: ${datamodule.graph_k_min}
+#        k_max: ${datamodule.graph_k_max}
+#        gap: ${datamodule.graph_gap}
+#        se_ratio: ${datamodule.graph_se_ratio}
+#        se_min: ${datamodule.graph_se_min}
+#        cycles: ${datamodule.graph_cycles}
+#        margin: ${datamodule.graph_margin}
+#        chunk_size: ${datamodule.graph_chunk}
+#        halfspace_filter: True
+#        bbox_filter: True
+#        target_pc_flip: True
+#        source_pc_sort: False
+#        keys: ['mean_off', 'std_off', 'mean_dist' ]
+#    - transform: NAGTo
+#      params:
+#        device: 'cpu'
 
 # Features that will be computed, saved, loaded for points and segments
 
@@ -115,7 +116,7 @@ partition_hf:
 
 # point features used for training
 point_hf:
-  #- 'intensity'
+  - 'intensity'
   - 'linearity'
   - 'planarity'
   - 'scattering'
@@ -138,15 +139,15 @@ edge_hf:
   - 'mean_off'
   - 'std_off'
   - 'mean_dist'
-  #- 'angle_source'
-  #- 'angle_target'
-  #- 'centroid_dir'
-  #- 'centroid_dist'
-  #- 'normal_angle'
-  #- 'log_length'
-  #- 'log_surface'
-  #- 'log_volume'
-  #- 'log_size'
+  - 'angle_source'
+  - 'angle_target'
+  - 'centroid_dir'
+  - 'centroid_dist'
+  - 'normal_angle'
+  - 'log_length'
+  - 'log_surface'
+  - 'log_volume'
+  - 'log_size'
 
 v_edge_hf: []  # vertical edge features used for training
 
@@ -173,8 +174,8 @@ graph_k_min: 1
 graph_k_max: 30
 graph_gap: [5, 30, 30]
 graph_se_ratio: 0.3
-#graph_se_min: 20
-graph_se_min: 50 # økt fra 20 for å unngå små sub-tiles
+graph_se_min: 20
+#graph_se_min: 50 # økt fra 20 for å unngå små sub-tiles
 graph_cycles: 3
 graph_margin: 0.5
 graph_chunk: [1e6, 1e5, 1e5]  # reduce if CUDA memory errors

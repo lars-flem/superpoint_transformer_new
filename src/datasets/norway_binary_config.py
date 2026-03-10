@@ -29,43 +29,42 @@ TILES = {
     ],
 }
 
-# mapping fra LAS classification (0-255) -> train id (0/1/2/3)
-# 0 = ground, 1 = not_ground, 2 = building, 3 = void/ignored
-ID2TRAINID = np.full(256, 3, dtype=np.int64)  # default: ignored (3)
+# mapping fra LAS classification (0-255) -> train id (0/1/2)
+# 0 = ground, 1 = not_ground, 2 = ignored (not used in training)
+ID2TRAINID = np.full(256, 2, dtype=np.int64)  # default: ignored (2)
 
 # LAS standard klassifisering:
-# 1 = Unclassified      -> ignored (3)
+# 1 = Unclassified      -> ignored (2)
 # 2 = Ground            -> ground (0)
-# 3 = Low Vegetation    -> not_ground (1)
+# 3 = Low Vegetation    -> ignored (2)
 # 4 = Medium Vegetation -> not_ground (1)
 # 5 = High Vegetation   -> not_ground (1)
-# 6 = Building          -> building (2)
-# 7 = Low Point (Noise) -> ignored (3)
-# 9 = Water            -> ignored (3)
+# 6 = Building          -> not_ground (1)  # Buildings classified as not_ground
+# 7 = Low Point (Noise) -> ignored (2)
+# 9 = Water            -> ignored (2)
 # 14= Powerlines       -> not_ground (1)
 # 15= Transmission Tower-> not_ground (1)
 # 17= Bridge           -> not_ground (1)
-# 24= Snow             -> ignored (3)
+# 24= Snow             -> ignored (2)
 
 ID2TRAINID[2] = 0                  # Ground -> ground
-ID2TRAINID[3] = 1                  # Low Vegetation -> not_ground
+ID2TRAINID[3] = 0                  # Low Vegetation -> ignored
 ID2TRAINID[4] = 1                  # Medium Vegetation -> not_ground
 ID2TRAINID[5] = 1                  # High Vegetation -> not_ground
-ID2TRAINID[6] = 2                  # Building -> building
-ID2TRAINID[9] = 3                  # Water -> ignored
+ID2TRAINID[6] = 1                  # Building -> not_ground
+ID2TRAINID[9] = 2                  # Water -> ignored
 ID2TRAINID[14]= 1                  # Powerlines -> not_ground
 ID2TRAINID[15]= 1                  # Transmission Tower -> not_ground
 ID2TRAINID[17]= 1                  # Bridge -> not_ground
-ID2TRAINID[24]= 3                  # Snow -> ignored
+ID2TRAINID[24]= 2                  # Snow -> ignored
 
-# Klasse 1 og 7 forblir 3 (ignored)
+# Klasse 1 og 7 forblir 2 (ignored)
 
-CLASS_NAMES = ["ground", "not_ground", "building", "ignored"]
+CLASS_NAMES = ["ground", "not_ground", "ignored"]
 CLASS_COLORS = [
     [140, 90, 60],   # ground
     [180, 180, 180], # not_ground
-    [220, 20, 60],  # building
     [0, 0, 0],       # ignored
 ]
 
-NOR_NUM_CLASSES = 3
+NOR_NUM_CLASSES = 2  # Only ground and not_ground count for training

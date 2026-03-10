@@ -12,7 +12,8 @@ torch.multiprocessing.set_sharing_strategy('file_system')
 
 from src.datasets import BaseDataset
 from src.data import Data
-from src.datasets.norway_binary_config import TILES, ID2TRAINID, CLASS_NAMES, CLASS_COLORS, NOR_NUM_CLASSES
+#from src.datasets.norway_binary_config import TILES, ID2TRAINID, CLASS_NAMES, CLASS_COLORS, NOR_NUM_CLASSES
+from src.datasets.bergen2023_binary_config import TILES, ID2TRAINID, CLASS_NAMES, CLASS_COLORS, NOR_NUM_CLASSES
 
 DIR = os.path.dirname(os.path.realpath(__file__))
 log = logging.getLogger(__name__)

@@ -1,4 +1,4 @@
-# src/datasets/norway_binary.py
+# src/datasets/norway_bergen2022.py
 import os
 import os.path as osp
 import logging
@@ -12,7 +12,8 @@ torch.multiprocessing.set_sharing_strategy('file_system')
 
 from src.datasets import BaseDataset
 from src.data import Data
-from src.datasets.norway_binary_config import TILES, ID2TRAINID, CLASS_NAMES, CLASS_COLORS, NOR_NUM_CLASSES
+from src.datasets.norway_bergen2022_config import TILES, ID2TRAINID, CLASS_NAMES, CLASS_COLORS, NOR_NUM_CLASSES
+from src.utils.color import to_float_rgb
 
 DIR = os.path.dirname(os.path.realpath(__file__))
 log = logging.getLogger(__name__)
@@ -20,7 +21,7 @@ log = logging.getLogger(__name__)
 __all__ = ['NorwayBinaryALS', 'MiniNorwayBinaryALS']
 
 
-def read_norway_laz(path: str, rgb: bool = True) -> Data:
+def read_norway_laz(path: str, rgb: bool = False) -> Data:
     las = laspy.read(path)
     data = Data()
 
@@ -76,6 +77,11 @@ class NorwayBinaryALS(BaseDataset):
         """
         self.rgb = rgb
         super().__init__(*args, **kwargs)
+
+    @property 
+    def data_subdir_name(self) -> str:
+        # Override to avoid extra /norwaybinaryals/ folder - we want direct access to /raw/
+        return ""
 
     @property
     def class_names(self) -> List[str]:

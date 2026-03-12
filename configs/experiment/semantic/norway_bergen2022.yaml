@@ -19,7 +19,7 @@
 # (less diversity in the spherical samples)
 
 defaults:
-  - override /datamodule: semantic/norway_binary.yaml
+  - override /datamodule: semantic/norway_bergen2022.yaml
   - override /model: semantic/spt-2.yaml
   - override /trainer: gpu.yaml
 
@@ -27,8 +27,8 @@ defaults:
 # this allows you to overwrite only specified parameters
 
 datamodule:
-  xy_tiling: 2  # split each cloud into xy_tiling²=25 tiles, based on a regular XY grid. Reduces preprocessing- and inference-time GPU memory
-  #sample_graph_k: 2  # 2 spherical samples in each batch instead of 4. Reduces train-time GPU memory
+  xy_tiling: 1  # split each cloud into xy_tiling²=1 tiles, based on a regular XY grid. Reduces preprocessing- and inference-time GPU memory
+  sample_graph_k: 2  # 2 spherical samples in each batch instead of 4. Reduces train-time GPU memory
 
 callbacks:
   gradient_accumulator:
@@ -37,15 +37,13 @@ callbacks:
         2  # accumulate gradient every 2 batches, to make up for reduced batch size
 
 trainer:
-  max_epochs: 400  # to keep same nb of steps: 25/9x more tiles, 2-step gradient accumulation -> epochs * 2 * 9 / 25
+  max_epochs: 50  # Large dataset (266 tiles) - reduced epochs for faster convergence
 
 model:
-  #multi_stage_loss_lambdas: [1, 25, 50]  # 3 entries for spt-3 (3 output stages)
   optimizer:
     lr: 0.01
     weight_decay: 1e-4
 
 logger:
-  wandb:
-    project: "spt_norway_binary"
-    name: "SPT-64"
+  csv:
+    save_dir: ${paths.output_dir}

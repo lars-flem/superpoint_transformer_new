@@ -1,7 +1,7 @@
 #!/bin/bash
 #SBATCH --account=share-ie-IDI
-#SBATCH --job-name=spt_bergen2020
-#SBATCH --time=12:00:00
+#SBATCH --job-name=spt_bergen2022
+#SBATCH --time=60:00:00
 #SBATCH --partition=GPUQ        
 #SBATCH --gres=gpu:a100:1       
 #SBATCH --mem=96G                 
@@ -22,10 +22,12 @@ conda activate spt
 
 cd /cluster/home/larshfle/superpoint_transformer_new
 
+rm -rf /cluster/home/larshfle/datasets/bergen2022_10pkt/processed/
+
 source ~/.bashrc && conda activate spt && cd /cluster/home/larshfle/superpoint_transformer_new && python src/train.py \
-    experiment=semantic/norway_binary \
-    datamodule=semantic/norway_binary \
-    paths.data_dir=/cluster/home/larshfle/datasets/norway_binary_testing/norwaybinaryals \
+    experiment=semantic/norway_bergen2022 \
+    datamodule=semantic/norway_bergen2022 \
+    paths.data_dir=/cluster/home/larshfle/datasets/bergen2022_10pkt \
     trainer.check_val_every_n_epoch=5 \
     callbacks.model_checkpoint.save_last=True \
     callbacks.model_checkpoint.every_n_epochs=5 \

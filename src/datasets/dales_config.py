@@ -121,15 +121,15 @@ DALES_NUM_CLASSES = 2
 ID2TRAINID = np.asarray([8, 0, 1, 2, 3, 4, 5, 6, 7])
 
 
-ID2TRAINID[0] = 0                  # Ground -> ground
-ID2TRAINID[1] = 1                  # Vegetation -> not_ground
-ID2TRAINID[2] = 1                  # Cars -> not_ground
-ID2TRAINID[3] = 1                  # Trucks -> not_ground
-ID2TRAINID[4] = 1                  # Power lines -> not_ground
-ID2TRAINID[5] = 1                  # Fences -> not_ground
-ID2TRAINID[6] = 1                  # Poles -> not_ground
-ID2TRAINID[7] = 1                  # Buildings -> not_ground
-ID2TRAINID[8] = 2                  # Unknown -> not_ground
+ID2TRAINID[0] = 2                  # Unknown -> ignored
+ID2TRAINID[1] = 0                  # Ground -> ground
+ID2TRAINID[2] = 1                  # Vegetation -> not_ground
+ID2TRAINID[3] = 1                  # Cars -> not_ground
+ID2TRAINID[4] = 1                  # Trucks -> not_ground
+ID2TRAINID[5] = 1                  # Power lines -> not_ground
+ID2TRAINID[6] = 1                  # Fences -> not_ground
+ID2TRAINID[7] = 1                  # Poles -> not_ground
+ID2TRAINID[8] = 1                  # Buildings -> not_ground
 
 
 

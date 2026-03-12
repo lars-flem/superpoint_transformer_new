@@ -1,7 +1,6 @@
 #!/bin/bash
-#SBATCH --account=share-ie-IDI
 #SBATCH --job-name=spt_dales
-#SBATCH --time=12:00:00
+#SBATCH --time=16:00:00
 #SBATCH --partition=GPUQ        
 #SBATCH --gres=gpu:a100:1       
 #SBATCH --mem=96G                 
@@ -21,6 +20,8 @@ source ~/.bashrc
 conda activate spt
 
 cd /cluster/home/larshfle/superpoint_transformer_new
+
+rm -rf /cluster/home/larshfle/datasets/dales_ply/dales/processed/
 
 python src/train.py \
   experiment=semantic/dales \

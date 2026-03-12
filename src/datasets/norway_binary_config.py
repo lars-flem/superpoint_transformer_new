@@ -4,10 +4,8 @@ import numpy as np
 # IDs (uten .laz) – må matche filnavnene dine i raw/{train,val,test}/
 TILES = {
     "train": [
-        #"32-1-468-145-22",    # Smal stripe, gir bare 1 superpoint
+        "32-1-468-145-22",    # Smal stripe, gir bare 1 superpoint
         "32-1-468-145-23",
-        "32-1-468-145-24",  # tomme sub-tiles med xy_tiling=3
-        "32-1-468-145-25",  # tomme sub-tiles med xy_tiling=3
         "32-1-468-145-32",
         "32-1-468-145-33",
         "32-1-468-145-34",

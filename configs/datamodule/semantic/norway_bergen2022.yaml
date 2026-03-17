@@ -2,11 +2,11 @@
 defaults:
   - /datamodule/semantic/default.yaml
 
-_target_: src.datamodules.norway_binary.NorwayBinaryDataModule
+_target_: src.datamodules.norway.NorwayDataModule
 
 # These parameters are not actually used by the DataModule, but are used
 # here to facilitate model parameterization with config interpolation
-num_classes: 4
+num_classes: 3
 stuff_classes: [0, 1]
 trainval: False
 val_on_test: False
@@ -122,3 +122,9 @@ drop_to_mean: False
 rgb_jitter: 0.0 
 rgb_autocontrast: 0.0
 rgb_drop: 0.0
+
+
+rgb: False  # Turn of for now
+#rgb_jitter: 0
+#rgb_autocontrast: 0.5
+#rgb_drop: 0.3

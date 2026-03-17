@@ -18,7 +18,7 @@ from src.utils.color import to_float_rgb
 DIR = os.path.dirname(os.path.realpath(__file__))
 log = logging.getLogger(__name__)
 
-__all__ = ['NorwayBinaryALS', 'MiniNorwayBinaryALS']
+__all__ = ['NorwayALS', 'MiniNorwayALS']
 
 
 def read_norway_laz(path: str, rgb: bool = False) -> Data:
@@ -68,7 +68,7 @@ def read_norway_laz(path: str, rgb: bool = False) -> Data:
     return data
 
 
-class NorwayBinaryALS(BaseDataset):
+class NorwayALS(BaseDataset):
 
     def __init__(self, *args, rgb: bool = True, **kwargs):
         """
@@ -154,7 +154,7 @@ class NorwayBinaryALS(BaseDataset):
         return osp.join(self.raw_dir, raw_split, base_cloud_id + ".laz")
 
 
-class MiniNorwayBinaryALS(NorwayBinaryALS):
+class MiniNorwayALS(NorwayALS):
     _NUM_MINI = 2
 
     @property

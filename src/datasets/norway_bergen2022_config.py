@@ -9,12 +9,18 @@ TILES = {
     "train": [
         "32-1-467-145-25",  # Central Bergen area - mixed urban
         "32-1-468-145-25",  # Central area - likely buildings + infrastructure
+        "32-1-467-144-24", "32-1-467-144-26", "32-1-467-144-27",
+        "32-1-467-145-32", "32-1-467-145-33", "32-1-467-145-35", "32-1-467-145-36",
+        "32-1-468-144-12", "32-1-468-144-14", "32-1-468-144-15", "32-1-468-144-17",
+
     ],
     "val": [
-        "32-1-467-144-25",  # Already in val/ - central Bergen area  
+        "32-1-467-144-25",  # Already in val/ - central Bergen area 
+        "32-1-467-144-13", "32-1-467-144-17"
     ],
     "test": [
-        "32-1-468-145-07",  # From same good area as train tiles - should have valid classes
+        "32-1-468-145-07",
+         "32-1-467-146-20", "32-1-467-146-31"
     ],
 }
 
@@ -125,10 +131,9 @@ TILES = {
 # 0 = ground
 # 1 = not_ground
 # 2 = building
-# 3 = bridge
-# 4 = ignored
+# 3 = ignored 
 
-ID2TRAINID = np.full(256, 4, dtype=np.int64)  # default: ignored
+ID2TRAINID = np.full(256, 3, dtype=np.int64)  # default: ignored
 
 # Ground
 ID2TRAINID[2] = 0
@@ -143,20 +148,19 @@ ID2TRAINID[15] = 1   # Transmission tower
 # Buildings
 ID2TRAINID[6] = 2
 
-# Bridge
-ID2TRAINID[17] = 3
 
 # ignored
-ID2TRAINID[1] = 4   # unclassified
-ID2TRAINID[7] = 4   # noise
-ID2TRAINID[9] = 4   # water
+ID2TRAINID[17] = 3  # Bridge
+ID2TRAINID[1] = 3   # unclassified
+ID2TRAINID[7] = 3   # noise
+ID2TRAINID[9] = 3   # water
 # Klasse 1 og 7 forblir 3 (ignored)
 
 CLASS_NAMES = [
     "ground",
     "not_ground",
     "building",
-    "bridge",
+    #"bridge",
     "ignored"
 ]
 
@@ -164,8 +168,8 @@ CLASS_COLORS = [
     [140, 90, 60],    # ground (brown)
     [180, 180, 180],  # not_ground (grey)
     [220, 20, 60],    # building (red)
-    [0, 0, 255],      # bridge (blue)
+    #[0, 0, 255],      # bridge (blue)
     [0, 0, 0],        # ignored
 ]
 
-NOR_NUM_CLASSES = 4
+NOR_NUM_CLASSES = 3

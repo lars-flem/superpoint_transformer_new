@@ -1,4 +1,5 @@
 import torch
+import logging
 import itertools
 import numpy as np
 from time import time
@@ -907,9 +908,14 @@ def _horizontal_graph_by_radius_for_single_level(
 
     # Exit in case the i_level graph contains only one node
     if num_nodes < 2:
-        raise ValueError(
-            f"Input NAG only has 1 node at level={i_level}. Cannot compute "
-            f"radius-based horizontal graph.")
+        log = logging.getLogger(__name__)
+        log.warning(
+            f"NAG only has {num_nodes} node(s) at level={i_level}. "
+            f"Skipping horizontal graph construction for this level.")
+        data.edge_index = torch.zeros((2, 0), dtype=torch.long, device=data.pos.device)
+        data.edge_attr = None
+        nag._list[i_level] = data
+        return nag
 
     # Compute the super_index for level-0 points wrt the target level
     super_index = nag.get_super_index(i_level)

@@ -1,0 +1,33 @@
+# @package _global_
+
+# Optuna hyperparameter search for Viken2022 SPT.
+# No preprocessing params here. Only training-time params are tuned,
+# so existing preprocessed data can be reused.
+
+defaults:
+  - override /hydra/sweeper: optuna
+
+optimized_metric: "val/miou_best"
+
+hydra:
+  sweeper:
+    _target_: hydra_plugins.hydra_optuna_sweeper.optuna_sweeper.OptunaSweeper
+    sampler:
+      _target_: optuna.samplers.TPESampler
+      seed: 123
+      n_startup_trials: 5
+    direction: maximize
+    n_trials: 15
+    storage: "sqlite:////cluster/home/jakobep/superpoint_transformer_new/logs/optuna_viken2022.db"
+    study_name: viken2022_optuna
+    params:
+      model.optimizer.lr: interval(0.001, 0.05)
+      model.optimizer.weight_decay: interval(1e-5, 1e-3)
+
+      datamodule.h_edge_feat_drop: interval(0.1, 0.6)
+      datamodule.rgb_drop: interval(0.1, 0.6)
+      datamodule.pos_jitter: interval(0.01, 0.15)
+      datamodule.anisotropic_scaling: interval(0.1, 0.4)
+
+      datamodule.sample_graph_k: choice(2, 4)
+      datamodule.sample_graph_r: choice(30, 50, 75)

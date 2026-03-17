@@ -1,0 +1,122 @@
+# @package datamodule
+defaults:
+  - /datamodule/semantic/default.yaml
+
+_target_: src.datamodules.viken2022.Viken2022DataModule
+
+# These parameters are not actually used by the DataModule, but are used
+# here to facilitate model parameterization with config interpolation.
+num_classes: 2
+stuff_classes: [0, 1]
+trainval: False
+val_on_test: False
+xy_tiling: 2
+
+# point features used for the partition
+partition_hf:
+  - "rgb"
+  - "linearity"
+  - "planarity"
+  - "scattering"
+  - "elevation"
+
+# point features used for training
+point_hf:
+  - "rgb"
+  - "intensity"
+  - "linearity"
+  - "planarity"
+  - "scattering"
+  - "verticality"
+  - "elevation"
+
+# segment-wise features computed at preprocessing
+segment_base_hf: []
+
+# segment features computed as the mean of point features in each segment,
+# saved with "mean_" prefix
+segment_mean_hf: []
+
+# segment features computed as the std of point features in each segment,
+# saved with "std_" prefix
+segment_std_hf: []
+
+# horizontal edge features used for training
+edge_hf:
+  - "mean_off"
+  - "std_off"
+  - "mean_dist"
+  - "angle_source"
+  - "angle_target"
+  - "centroid_dir"
+  - "centroid_dist"
+  - "normal_angle"
+  - "log_length"
+  - "log_surface"
+  - "log_volume"
+  - "log_size"
+
+v_edge_hf: []
+
+# Parameters declared here to facilitate tuning configs without copying
+# all pre_transforms
+voxel: 0.2
+knn: 25
+knn_r: 10
+knn_step: -1
+knn_min_search: 10
+ground_model: "ransac"
+ground_threshold: 5
+ground_xy_grid: 1
+ground_scale: 20
+pcp_regularization: [0.1, 0.2, 0.3]
+pcp_spatial_weight: [1e-1, 1e-2, 1e-3]
+pcp_edge_reduce: "mean"
+pcp_cutoff: [10, 30, 100]
+pcp_k_adjacency: 10
+pcp_w_adjacency: 1
+pcp_iterations: 15
+graph_k_min: 1
+graph_k_max: 30
+graph_gap: [5, 30, 30]
+graph_se_ratio: 0.3
+graph_se_min: 20
+graph_cycles: 3
+graph_margin: 0.5
+graph_chunk: [1e6, 1e5, 1e5]
+
+# Batch construction parameterization
+sample_segment_ratio: 0.2
+sample_segment_by_size: True
+sample_segment_by_class: False
+sample_point_min: 32
+sample_point_max: 128
+sample_graph_r: 50
+sample_graph_k: 4
+sample_graph_max_nodes: 10000
+sample_graph_disjoint: True
+sample_graph_cylindrical: True
+sample_edge_n_min: -1
+sample_edge_n_max: -1
+
+# Augmentations parameterization
+pos_jitter: 0.05
+tilt_n_rotate_phi: 0.1
+tilt_n_rotate_theta: 180
+anisotropic_scaling: 0.2
+node_feat_jitter: 0
+h_edge_feat_jitter: 0
+v_edge_feat_jitter: 0
+node_feat_drop: 0
+h_edge_feat_drop: 0.3
+v_edge_feat_drop: 0
+node_row_drop: 0
+h_edge_row_drop: 0
+v_edge_row_drop: 0
+drop_to_mean: False
+
+# Enable RGB loading from LAZ files
+rgb: True
+rgb_jitter: 0
+rgb_autocontrast: 0.5
+rgb_drop: 0.3

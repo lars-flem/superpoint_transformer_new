@@ -2,17 +2,16 @@
 defaults:
   - /datamodule/semantic/default.yaml
 
-_target_: src.datamodules.dales.DALESDataModule
+_target_: src.datamodules.norway_binary.NorwayBinaryDataModule
 
 # These parameters are not actually used by the DataModule, but are used
 # here to facilitate model parameterization with config interpolation
-num_classes: 2
+num_classes: 4
 stuff_classes: [0, 1]
-trainval: True
-val_on_test: True
-xy_tiling: 3
+trainval: False
+val_on_test: False
+xy_tiling: 1  # No tiling - 266 files is already massive dataset
 
-# Features that will be computed, saved, loaded for points and segments
 
 # point features used for the partition
 partition_hf:
@@ -60,17 +59,18 @@ v_edge_hf: []  # vertical edge features used for training
 
 # Parameters declared here to facilitate tuning configs without copying
 # all the pre_transforms
-voxel: 0.1
+voxel: 0.2  # samme som gammel config
 knn: 25
 knn_r: 10
 knn_step: -1
 knn_min_search: 10
 ground_model: 'ransac'
 ground_threshold: 5
-ground_xy_grid: 5
+ground_xy_grid: 1
 ground_scale: 20
 pcp_regularization: [0.1, 0.2, 0.3]
 pcp_spatial_weight: [1e-1, 1e-2, 1e-3]
+#pcp_spatial_weight: [0.5, 0.1, 0.01]
 pcp_edge_reduce: 'mean'
 pcp_cutoff: [10, 30, 100]
 pcp_k_adjacency: 10
@@ -81,6 +81,7 @@ graph_k_max: 30
 graph_gap: [5, 30, 30]
 graph_se_ratio: 0.3
 graph_se_min: 20
+#graph_se_min: 50 # økt fra 20 for å unngå små sub-tiles
 graph_cycles: 3
 graph_margin: 0.5
 graph_chunk: [1e6, 1e5, 1e5]  # reduce if CUDA memory errors

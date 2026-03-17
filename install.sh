@@ -146,6 +146,7 @@ if [[ "$INSTALL_TORCHSPARSE" == true ]]; then
     pip install backports.cached-property
     pip install rootpath
     conda install -y google-sparsehash -c bioconda
+    export CPLUS_INCLUDE_PATH=$CONDA_PREFIX/include:$CPLUS_INCLUDE_PATH
     cd src/dependencies/torchsparse
     pip install .
     cd ../../../

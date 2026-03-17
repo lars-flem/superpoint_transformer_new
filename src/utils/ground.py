@@ -97,7 +97,30 @@ def filter_by_verticality(verticality, threshold):
     return verticality.squeeze() < threshold
 
 
-def single_plane_model(pos, random_state=0, residual_threshold=1e-3):
+def single_plane_model(pos, random_state=0, residual_threshold=1e-3, labels=None):
+    
+    
+    if len(pos)<3:
+        print("#"*100)
+        print("RAnzac wont work i simply create two extra points by copying the first point while adding to the x and y value")
+        # Take the first point
+        first_point = pos[0].unsqueeze(0).clone()
+        #print("first_point:"+str(first_point))
+        another_copy = first_point.clone()
+
+        #update the x and y values 
+        first_point[0][0]+=10
+        #print("first_point:"+str(first_point))
+        first_point[0][1]+=10
+        another_copy[0][0]-=10
+        another_copy[0][1]-=10
+
+        #apend the midified copy of the points
+        pos= torch.cat([pos,first_point,another_copy])
+        print("pos after adding two new points:"+str(pos))
+        print("#"*100)
+    
+    
     """Model the ground as a single plane using RANSAC.
 
     Returns a callable taking an XYZ tensor as input and returning the
@@ -112,43 +135,33 @@ def single_plane_model(pos, random_state=0, residual_threshold=1e-3):
     :return:
     """
     assert is_xyz_tensor(pos)
+
+
+    #ADD CPU AS DEAFULT, NO GPU PLANE FITTING FOR NOW, SINCE IT OFTEN FAILS AND FALLS BACK TO CPU METHOD ANYWAY
     
-    if len(pos)<3:
-        print("#"*100)
-        print("RAnzac wont work i simply create two extra points by copying the first point while adding to the x and y value")
-        # Take the first point
-        first_point = pos[0].unsqueeze(0).clone()
-        another_copy = first_point.clone()
+    xy = pos[:, :2].cpu().numpy()
+    z = pos[:, 2].cpu().numpy()
 
-        #update the x and y values 
-        first_point[0][0]+=10
-        first_point[0][1]+=10
-        another_copy[0][0]-=10
-        another_copy[0][1]-=10
+    # Search the ground plane using RANSAC
+    ransac = RANSACRegressor(
+        random_state=random_state,
+        residual_threshold=residual_threshold).fit(
+        xy, z)
 
-        #apend the midified copy of the points
-        pos= torch.cat([pos,first_point,another_copy])
-        print("pos after adding two new points:"+str(pos))
-        print("#"*100)
+    def predict_elevation(pos_query):
+        assert is_xyz_tensor(pos_query)
+        device = pos_query.device
+        xy = pos_query[:, :2]
+        z = pos_query[:, 2]
+        return z - torch.from_numpy(ransac.predict(xy.cpu().numpy())).to(device)
 
-    if pos.is_cpu:
-        xy = pos[:, :2].cpu().numpy()
-        z = pos[:, 2].cpu().numpy()
 
-        # Search the ground plane using RANSAC
-        ransac = RANSACRegressor(
-            random_state=random_state,
-            residual_threshold=residual_threshold).fit(
-            xy, z)
-
-        def predict_elevation(pos_query):
-            assert is_xyz_tensor(pos_query)
-            device = pos_query.device
-            xy = pos_query[:, :2]
-            z = pos_query[:, 2]
-            return z - torch.from_numpy(ransac.predict(xy.cpu().numpy())).to(device)
-
+    """
+    if predict_elevation is not None:
+        return predict_elevation  # CRITICAL FIX: was missing!
     else:
+
+        print("CPU FAILED!!")
         result = plane_fit(
             pts=pos,
             thresh=residual_threshold,
@@ -157,15 +170,78 @@ def single_plane_model(pos, random_state=0, residual_threshold=1e-3):
             epsilon=1e-8,
             device=pos.device)
 
-        # result.equation holds: [a, b, c, d] for ax + by + cz + d = 0
-        w = result.equation[:-1]
-        b = result.equation[-1]
+        print(f"[DEBUG] plane_fit result: {result}")
+        print(f"[DEBUG] result is None: {result is None}")
+        if result is not None:
+            print(f"[DEBUG] result.equation: {result.equation}")
 
-        def predict_elevation(pos_query):
-            assert is_xyz_tensor(pos_query)
-            delta_z = (torch.matmul(pos_query, w) + b) / w[2]
-            return delta_z
+        if result is None:
+            # ADDED FALLBACK IN CASE RANSAC FAILS, WHICH HAPPENS WHEN THE POINT CLOUD IS TOO SMALL OR TOO NOISY
+            print("[single_plane_model] plane_fit failed! Falling back to sklearn RANSAC (CPU method)...")
+            
+            # Use the same method as CPU branch
+            xy = pos[:, :2].cpu().numpy()
+            z = pos[:, 2].cpu().numpy()
 
+            try:
+                ransac = RANSACRegressor(
+                    random_state=random_state,
+                    residual_threshold=residual_threshold).fit(
+                    xy, z)
+
+                def predict_elevation(pos_query):
+                    assert is_xyz_tensor(pos_query)
+                    device = pos_query.device
+                    xy = pos_query[:, :2]
+                    z = pos_query[:, 2]
+                    return z - torch.from_numpy(ransac.predict(xy.cpu().numpy())).to(device)
+                
+                return predict_elevation
+            except Exception as e:
+                print(f"[single_plane_model] sklearn RANSAC also failed: {e}")
+                print("[single_plane_model] Using flat ground fallback (mean elevation)")
+                
+                # Final fallback: use mean elevation (flat ground assumption)
+                mean_z = pos[:, 2].mean()
+                
+                def predict_elevation(pos_query):
+                    assert is_xyz_tensor(pos_query)
+                    return pos_query[:, 2] - mean_z
+                
+                return predict_elevation
+        else:
+            # result.equation holds: [a, b, c, d] for ax + by + cz + d = 0
+            if result.equation is None:
+                # Fallback: use mean elevation (flat ground assumption)
+                mean_z = pos[:, 2].mean()
+                
+                def predict_elevation(pos_query):
+                    assert is_xyz_tensor(pos_query)
+                    return pos_query[:, 2] - mean_z
+                
+                return predict_elevation
+                
+            w = result.equation[:-1]
+            b = result.equation[-1]
+
+            # Check that the plane is sufficiently horizontal.
+            # |w[2]| close to 0 means the plane is near-vertical,
+            # which makes the elevation formula (divide by w[2]) blow up.
+            if abs(w[2].item()) < 0.1:
+                print(f"[single_plane_model] WARNING: plane is near-vertical "
+                      f"(w={w.tolist()}, |w[2]|={abs(w[2].item()):.4f}). "
+                      f"Falling back to mean elevation.")
+                mean_z = pos[:, 2].mean()
+                def predict_elevation(pos_query):
+                    assert is_xyz_tensor(pos_query)
+                    return pos_query[:, 2] - mean_z
+                return predict_elevation
+
+            def predict_elevation(pos_query):
+                assert is_xyz_tensor(pos_query)
+                delta_z = (torch.matmul(pos_query, w) + b) / w[2]
+                return delta_z
+    """
     return predict_elevation
 
 

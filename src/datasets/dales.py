@@ -57,7 +57,8 @@ def read_dales_tile(
         to their train ID.
     """
     data = Data()
-    key = 'testing'
+    #key = 'testing'
+    key = 'vertex'
     with open(filepath, "rb") as f:
         tile = PlyData.read(f)
 
@@ -72,19 +73,19 @@ def read_dales_tile(
         if intensity:
             # Heuristic to bring the intensity distribution in [0, 1]
             data.intensity = torch.tensor(
-                tile[key]['intensity'], dtype=torch.float
+                tile[key]['reflectance'], dtype=torch.float
             ).clip(min=0, max=60000) / 60000
 
         if semantic:
-            y = torch.tensor(tile[key]['sem_class'], dtype=torch.long)
+            y = torch.tensor(tile[key]['class'], dtype=torch.long)
             data.y = torch.from_numpy(ID2TRAINID)[y] if remap else y
 
         if instance:
             idx = torch.arange(data.num_points)
-            obj = torch.tensor(tile[key]['ins_class'], dtype=torch.long)
+            obj = torch.tensor(tile[key]['class'], dtype=torch.long)
             obj = consecutive_cluster(obj)[0]
             count = torch.ones_like(obj)
-            y = torch.tensor(tile[key]['sem_class'], dtype=torch.long)
+            y = torch.tensor(tile[key]['class'], dtype=torch.long)
             y = torch.from_numpy(ID2TRAINID)[y] if remap else y
             data.obj = InstanceData(idx, obj, count, y, dense=True)
 

@@ -1,0 +1,37 @@
+# Viken2022 terminal commands (test before sbatch)
+
+# 1) Environment setup
+source ~/.bashrc
+conda activate spt
+cd /cluster/home/jakobep/superpoint_transformer_new
+
+# Optional on compute node if modules are needed:
+# module purge
+# module load CUDA/12.1.1
+# module load GCC/11.3.0
+
+# 2) Quick smoke test (small run on CPU)
+python src/train.py \
+  experiment=semantic/viken2022 \
+  datamodule=semantic/viken2022 \
+  paths.data_dir=/cluster/home/jakobep/datasets/viken2022 \
+  trainer=cpu \
+  debug=limit \
+  test=False \
+  logger=csv
+
+# 3) Manual full run (same as sbatch command)
+python src/train.py \
+  experiment=semantic/viken2022 \
+  datamodule=semantic/viken2022 \
+  paths.data_dir=/cluster/home/jakobep/datasets/viken2022 \
+  trainer.check_val_every_n_epoch=5 \
+  callbacks.model_checkpoint.save_last=True \
+  callbacks.model_checkpoint.every_n_epochs=5 \
+  callbacks.model_checkpoint.monitor=null \
+  test=True \
+  logger=csv
+
+
+
+rm -rf /cluster/home/jakobep/datasets/viken2022/processed/

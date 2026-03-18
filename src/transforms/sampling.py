@@ -1,5 +1,6 @@
 import re
 import math
+import logging
 import torch
 from torch_geometric.nn.pool import voxel_grid
 from torch_geometric.utils import k_hop_subgraph, to_undirected
@@ -194,6 +195,17 @@ class GridSampling3D(Transform):
 
         # Convert point coordinates to the voxel grid coordinates
         coords = torch.round((data.pos) / self.grid_size)
+
+        # torch_cluster.grid does not support empty inputs.
+        if coords.shape[0] == 0:
+            logger = logging.getLogger(__name__)
+            logger.warning(
+                f"{self.__class__.__name__}: Skipping empty point cloud "
+                f"(0 points). Returning data unchanged.")
+            if self.quantize_coords:
+                data.coords = coords.int()
+            data.grid_size = torch.tensor([self.grid_size])
+            return data
 
         # Match each point with a voxel identifier
         if 'batch' not in data:
@@ -491,15 +503,46 @@ class SampleXYTiling(Transform):
         self.y = y
 
     def _process(self, data):
+        # No tiling to do if the input is already empty.
+        if data.pos.shape[0] == 0:
+            logger = logging.getLogger(__name__)
+            logger.warning(
+                f"{self.__class__.__name__}: Input cloud is empty "
+                f"(0 points). Returning data unchanged.")
+            return data
+
         # Compute the xy coordinates in the tiling grid, for each point
         xy = data.pos[:, :2].clone().view(-1, 2)
+        tiling = self.tiling.to(xy.device)
         xy -= xy.min(dim=0).values.view(1, 2)
-        xy /= xy.max(dim=0).values.view(1, 2)
-        xy = xy.clip(min=0, max=1) * self.tiling.view(1, 2)
+        span = xy.max(dim=0).values
+        span = torch.where(span > 0, span, torch.ones_like(span))
+        xy /= span.view(1, 2)
+
+        # Keep points exactly on the upper boundary in the last tile.
+        eps = torch.finfo(xy.dtype).eps
+        xy = xy.clip(min=0, max=1 - eps) * tiling.view(1, 2)
         xy = xy.long()
 
         # Select only the points in the desired tile
         idx = torch.where((xy[:, 0] == self.x) & (xy[:, 1] == self.y))[0]
+
+        # Fallback to the most populated tile if the requested tile is empty.
+        if idx.numel() == 0:
+            tile_id = xy[:, 0] * tiling[1] + xy[:, 1]
+            num_tiles = int((tiling[0] * tiling[1]).item())
+            counts = torch.bincount(tile_id, minlength=num_tiles)
+            fallback_id = counts.argmax()
+            fallback_x = int((fallback_id // tiling[1]).item())
+            fallback_y = int((fallback_id % tiling[1]).item())
+            idx = torch.where(
+                (xy[:, 0] == fallback_x) & (xy[:, 1] == fallback_y))[0]
+
+            logger = logging.getLogger(__name__)
+            logger.warning(
+                f"{self.__class__.__name__}: Requested tile "
+                f"({self.x}, {self.y}) is empty. Falling back to "
+                f"tile ({fallback_x}, {fallback_y}) with {idx.numel()} points.")
 
         return data.select(idx)[0]
 
@@ -541,6 +584,17 @@ class QuantizePointCoordinates(Transform):
 
         # Convert point coordinates to the voxel grid coordinates
         coords = torch.round((data.pos) / self.grid_size)
+
+        # torch_cluster.grid does not support empty inputs.
+        if coords.shape[0] == 0:
+            logger = logging.getLogger(__name__)
+            logger.warning(
+                f"{self.__class__.__name__}: Skipping empty point cloud "
+                f"(0 points). Returning NAG unchanged.")
+            empty_idx = torch.empty(0, dtype=torch.long, device=coords.device)
+            nag_out = nag_in.select(0, empty_idx)
+            nag_out[0].coords = coords.int()
+            return nag_out
 
         # Match each point with a voxel identifier
         if 'batch' not in data:

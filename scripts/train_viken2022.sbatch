@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH --job-name=spt_viken2022
-#SBATCH --time=2:00:00
+#SBATCH --time=5:00:00
 #SBATCH --partition=GPUQ
 #SBATCH --gres=gpu:a100:1
 #SBATCH --mem=40G

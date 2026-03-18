@@ -14,7 +14,7 @@ xy_tiling: 2
 
 # point features used for the partition
 partition_hf:
-  - "rgb"
+ # - "rgb"
   - "linearity"
   - "planarity"
   - "scattering"
@@ -22,7 +22,7 @@ partition_hf:
 
 # point features used for training
 point_hf:
-  - "rgb"
+#  - "rgb"
   - "intensity"
   - "linearity"
   - "planarity"
@@ -116,7 +116,7 @@ v_edge_row_drop: 0
 drop_to_mean: False
 
 # Enable RGB loading from LAZ files
-rgb: True
+rgb: False
 rgb_jitter: 0
 rgb_autocontrast: 0.5
 rgb_drop: 0.3

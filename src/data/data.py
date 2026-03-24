@@ -1191,6 +1191,17 @@ class Batch(PyGBatch, Data):
                     data_list[i].edge_index = edge_index
                     data_list[i].edge_attr = edge_attr
 
+            # Dynamically exclude keys that don't exist in all data objects
+            # to prevent PyG's collate from crashing
+            if exclude_keys is None:
+                exclude_keys = []
+            else:
+                exclude_keys = list(exclude_keys)  # Make a copy to avoid modifying input
+            
+            for k in data_list[0].to_dict().keys():
+                if k not in exclude_keys and not all(k in d for d in data_list):
+                    exclude_keys.append(k)
+
             # PyG's collate() mechanism will increment tensors for which
             # self.__inc__() is not None. Yet, in our pipeline, it is
             # possible that some of these tensors are stored in such a
@@ -1205,6 +1216,9 @@ class Batch(PyGBatch, Data):
                     continue
                 dtype = torch.float if v.is_floating_point() else torch.long
                 for d in data_list:
+                    # Skip key if it doesn't exist in this data object
+                    if k not in d:
+                        continue
                     d[k] = d[k].to(dtype)
 
             # PyG's collate() (and torch's default_collate()) mechanism
@@ -1219,6 +1233,9 @@ class Batch(PyGBatch, Data):
                     continue
                 # Find the appropriate dtype for the concatenation of
                 # all the tensors and cast all tensors to the same one
+                # Skip if key doesn't exist in all data objects
+                if not all(k in d for d in data_list):
+                    continue
                 dtype = torch.stack([d[k].view(-1)[0] for d in data_list]).dtype
                 for d in data_list:
                     d[k] = d[k].to(dtype)

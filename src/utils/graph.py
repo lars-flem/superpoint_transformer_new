@@ -160,6 +160,12 @@ def subedges(
     # Trim the graph
     edge_index = to_trimmed(edge_index)
 
+    # Handle empty edge_index early
+    if edge_index.shape[1] == 0:
+        ST_pairs = torch.empty((2, 0), dtype=torch.long, device=points.device)
+        ST_uid = torch.empty((0,), dtype=torch.long, device=points.device)
+        return edge_index, ST_pairs, ST_uid
+
     # Number of segments
     num_segments = index.max() + 1
 

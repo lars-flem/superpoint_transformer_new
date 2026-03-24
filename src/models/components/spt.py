@@ -820,6 +820,10 @@ class SPT(nn.Module):
                 # level
                 i_level = i_stage + 1 + self.nano
 
+                # Skip this stage if the level doesn't exist in the NAG
+                if i_level > nag.end_i_level:
+                    break
+
                 # Process handcrafted node and edge features. We need to
                 # do this here before those can be passed to the
                 # DownNFuseStage and, later on, to the UpNFuseStage

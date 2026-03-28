@@ -137,17 +137,32 @@ def single_plane_model(pos, random_state=0, residual_threshold=1e-3):
     z = pos[:, 2].cpu().numpy()
 
     # Search the ground plane using RANSAC
-    ransac = RANSACRegressor(
-        random_state=random_state,
-        residual_threshold=residual_threshold).fit(
-        xy, z)
+    try:
+        ransac = RANSACRegressor(
+            random_state=random_state,
+            residual_threshold=residual_threshold).fit(
+            xy, z)
 
-    def predict_elevation(pos_query):
-        assert is_xyz_tensor(pos_query)
-        device = pos_query.device
-        xy = pos_query[:, :2]
-        z = pos_query[:, 2]
-        return z - torch.from_numpy(ransac.predict(xy.cpu().numpy())).to(device)
+        def predict_elevation(pos_query):
+            assert is_xyz_tensor(pos_query)
+            device = pos_query.device
+            xy = pos_query[:, :2]
+            z = pos_query[:, 2]
+            return z - torch.from_numpy(ransac.predict(xy.cpu().numpy())).to(device)
+
+    except ValueError:
+        # RANSAC failed (e.g. all ground candidates share the same XY
+        # coordinates).  Fall back to a horizontal plane at the mean Z of
+        # the candidate ground points.
+        z_mean = float(z.mean())
+        print(
+            f"WARNING: RANSAC could not find a valid consensus set. "
+            f"Falling back to a flat ground plane at z={z_mean:.3f}.")
+
+        def predict_elevation(pos_query):
+            assert is_xyz_tensor(pos_query)
+            z_query = pos_query[:, 2]
+            return z_query - z_mean
 
     # else:
     #     result = plane_fit(

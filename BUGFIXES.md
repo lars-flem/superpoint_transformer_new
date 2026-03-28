@@ -4,10 +4,12 @@ This document outlines all the bug fixes and improvements made to the SuperPoint
 
 ## Summary
 
-A total of **4 critical bug fixes** were implemented to address issues with:
+A total of **6 critical bug fixes** were implemented to address issues with:
 - Empty graph structures
 - Heterogeneous data batching
 - Hierarchical model architecture mismatch
+- Sparse subtile skipping during preprocessing
+- Degenerate ground candidates causing RANSAC failure
 
 ---
 
@@ -159,13 +161,17 @@ if i_level > nag.end_i_level:
 ```
 Raw LiDAR Data (Viken2022)
     ↓
+Subtile Tiling → Sparse tiles skipped with .skip sentinel [Fix #5]
+    ↓
+Ground Elevation Transform → RANSAC fallback for degenerate tiles [Fix #6]
+    ↓
 Graph Construction (Empty edge guards) [Fixes #1, #2]
     ↓
 Batch Creation (Key exclusion) [Fix #3]
     ↓
 Model Forward Pass (Level bounds check) [Fix #4]
     ↓
-Training/Validation Complete ✓
+Training/Validation/Test Complete ✓
 ```
 
 ---
@@ -189,6 +195,8 @@ To verify these fixes work correctly, test the following scenarios:
 | 2 | Empty Tensor Concatenation | High | Early guard check |
 | 3 | KeyError on Missing Fields | High | Dynamic exclusion |
 | 4 | AssertionError on Out-of-Range Level | High | Bounds checking |
+| 5 | Crash on Sparse/Empty Subtile | High | `.skip` sentinel + dataset filtering |
+| 6 | RANSAC ValueError on Degenerate Ground | High | `try/except` with flat-plane fallback |
 
 ---
 
@@ -198,3 +206,80 @@ To verify these fixes work correctly, test the following scenarios:
 - No changes to model architecture or training procedures
 - Fixes are defensive programming patterns that handle edge cases
 - Documentation updated in `/memories/repo/preprocessing-notes.md`
+
+---
+
+## 5. Sparse Subtile Skipping with `.skip` Sentinel
+
+**File:** `src/datasets/base.py`
+
+**Issue:**
+When tiling large LiDAR tiles (e.g. over water bodies or empty terrain) into subtiles, some subtiles would have too few points to produce a valid graph hierarchy. This caused crashes deep in the preprocessing pipeline (graph construction, neighbor search, etc.) and required the entire tile to be reprocessed on each run.
+
+**Root Cause:**
+The base dataset had no mechanism to:
+1. Detect and skip sparse subtiles before costly preprocessing
+2. Remember that a subtile had been skipped, causing repeated crash-and-retry on subsequent runs
+
+**Fix:**
+Added a `min_points_per_subtile` parameter to `BaseDataset.__init__`. During preprocessing, if a tiled subtile has fewer than this threshold, a `.skip` sentinel file is written alongside where the `.h5` would have been:
+
+```python
+if n_pts < self._min_points_per_subtile:
+    skip_path = cloud_path.replace('.h5', '.skip')
+    open(skip_path, 'w').close()
+    return
+```
+
+The sentinel is then respected on future runs (no reprocessing) and throughout the dataset via three supporting additions:
+
+- **`_skip_path()`** — resolves the expected sentinel path for any cloud_id/stage.
+- **`processed_file_names`** — returns the `.skip` path (instead of `.h5`) for skipped tiles so PyG's existence check passes without requiring the actual data file.
+- **`_valid_processed_paths`** — new property returning only the `.h5` paths for non-skipped tiles. Used in `__getitem__`, in-memory loading, and class weight computation instead of `processed_paths`.
+- **`cloud_ids`** — updated to exclude skipped tiles, so dataset length and indexing are consistent.
+
+**Impact:**
+- ✅ Sparse/empty subtiles (e.g. water surfaces) are silently skipped without crashing
+- ✅ Sentinel prevents re-attempting preprocessing on already-skipped tiles
+- ✅ Skipped subtiles are excluded from train, val, and test — the model never sees them
+- ✅ Class weight computation and in-memory loading use the corrected path list
+- 📊 Controlled via `min_points_per_subtile` in the datamodule config (set to 0 to disable)
+
+---
+
+## 6. RANSAC Fallback for Degenerate Ground Candidates
+
+**File:** `src/utils/ground.py` (`single_plane_model`, line ~140)
+
+**Issue:**
+During preprocessing, the `GroundElevation` transform filters points by verticality, Z-distance, and local Z-min to isolate ground candidates before fitting a plane with RANSAC. On some tiles (e.g. sparse terrain or water tiles), all surviving ground-candidate points share near-identical XY coordinates. sklearn's `RANSACRegressor` needs at least 2 points with distinct XY to fit a `LinearRegression` model; when every random 2-point sub-sample is degenerate, it skips all `max_trials` iterations and raises:
+```
+ValueError: RANSAC could not find a valid consensus set. All `max_trials` iterations
+were skipped because each randomly chosen sub-sample failed the passing criteria.
+```
+First observed on tile `32-1-510-131-63.laz` after ~8 hours of preprocessing (tile 396/588).
+
+**Root Cause:**
+The existing guard (`if len(pos) < 3`) only protected against too-few points. It did not handle the case where ≥ 3 points are present but degenerate in XY (collinear or coincident), which causes RANSAC itself to fail internally.
+
+**Fix:**
+Wrapped the RANSAC fit in a `try/except ValueError` with a flat-plane fallback at the mean Z of the candidate ground points:
+```python
+try:
+    ransac = RANSACRegressor(...).fit(xy, z)
+    def predict_elevation(pos_query):
+        ...
+        return z - torch.from_numpy(ransac.predict(xy.cpu().numpy())).to(device)
+except ValueError:
+    z_mean = float(z.mean())
+    print(f"WARNING: RANSAC could not find a valid consensus set. "
+          f"Falling back to a flat ground plane at z={z_mean:.3f}.")
+    def predict_elevation(pos_query):
+        return pos_query[:, 2] - z_mean
+```
+
+**Impact:**
+- ✅ Prevents crash on tiles where filtered ground candidates are XY-degenerate
+- ✅ Falls back gracefully to a horizontal plane — reasonable for flat/water tiles
+- ✅ Preprocessing continues without manual intervention
+- 📊 A `UndefinedMetricWarning: R^2 score is not well-defined with less than two samples` from sklearn is a related but benign warning (RANSAC's internal scoring on a tiny inlier set) — not the same as this crash

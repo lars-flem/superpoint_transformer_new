@@ -6,3 +6,4 @@ from .s3dis import *
 from .s3dis_room import *
 from .scannet import *
 from .norway_binary import *
+from .trondheim import *

@@ -1,5 +1,5 @@
 #!/bin/bash
-#SBATCH --job-name=spt_bergen2022
+#SBATCH --job-name=spt_trondheim2022_optuna
 #SBATCH --time=16:00:00
 #SBATCH --partition=GPUQ        
 #SBATCH --gres=gpu:a100:1       
@@ -21,12 +21,12 @@ conda activate spt
 
 cd /cluster/home/larshfle/superpoint_transformer_new
 
-rm -rf /cluster/home/larshfle/datasets/bergen2022_10pkt/processed/ 
+#rm -rf /cluster/home/larshfle/datasets/trondheim2022_30pkt/processed/
 
-source ~/.bashrc && conda activate spt && cd /cluster/home/larshfle/superpoint_transformer_new && python src/train.py \
-    experiment=semantic/norway_bergen2022 \
-    datamodule=semantic/norway_bergen2022 \
-    paths.data_dir=/cluster/home/larshfle/datasets/bergen2022_10pkt \
+source ~/.bashrc && conda activate spt && cd /cluster/home/larshfle/superpoint_transformer_new && python src/train.py -m \
+    experiment=semantic/norway_trondheim2022 \
+    datamodule=semantic/norway_trondheim2022 \
+    paths.data_dir=/cluster/home/larshfle/datasets/trondheim2022_30pkt \
     datamodule.dataloader.num_workers=8 \
     trainer.check_val_every_n_epoch=5 \
     callbacks.model_checkpoint.save_last=True \
@@ -34,6 +34,3 @@ source ~/.bashrc && conda activate spt && cd /cluster/home/larshfle/superpoint_t
     callbacks.model_checkpoint.monitor=null \
     test=True \
     logger=csv 2>&1 | tee /tmp/train_output.log
-    
-    
-#trainer.max_epochs=20 \

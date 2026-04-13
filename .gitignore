@@ -170,3 +170,4 @@ local
 ckpt
 outputs
 wandb
+notebooks/dales_visualization.ipynb

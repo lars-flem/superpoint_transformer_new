@@ -160,6 +160,12 @@ def subedges(
     # Trim the graph
     edge_index = to_trimmed(edge_index)
 
+    if edge_index.shape[1] == 0:
+        return (
+            edge_index,
+            edge_index.new_empty((2, 0)),
+            edge_index.new_empty((0,)))
+
     # Number of segments
     num_segments = index.max() + 1
 

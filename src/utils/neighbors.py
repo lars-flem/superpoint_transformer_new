@@ -639,6 +639,13 @@ def cluster_radius_nn_graph(
     # workaround for the actual anchor points search, which is O(N²)
     # TODO: scatter_nearest_neighbor is the bottleneck of cluster_nn_radius(),
     #  we could accelerate things by randomly sampling in the clusters
+    # Sparse or degenerate tiles can legitimately produce no candidate
+    # inter-cluster edges after trimming. Return the empty graph here
+    # and let downstream code decide whether to reconnect isolated
+    # nodes, rather than crashing in scatter_nearest_neighbor.
+    if edge_index.shape[1] == 0:
+        return edge_index, distances
+
     anchors = scatter_nearest_neighbor(
         x_points,
         idx,

@@ -7,6 +7,7 @@ import random
 import logging
 import hashlib
 import warnings
+import h5py
 from tqdm import tqdm
 from time import time
 from datetime import datetime
@@ -1035,8 +1036,10 @@ class BaseDataset(InMemoryDataset):
                 return None
             del sample
 
-        # To be as fast as possible, we read only the last level of each
-        # NAG, and accumulate the class counts from the label histograms
+        # Read only the last available label histogram from each file.
+        # Some clouds may stop earlier in the hierarchy, so clamp the
+        # requested level per file instead of assuming every NAG has the
+        # same depth as the first sample.
         counts = torch.zeros(self.num_classes)
         for i in range(len(self)):
             if self.in_memory:
@@ -1044,11 +1047,21 @@ class BaseDataset(InMemoryDataset):
                 y = sample[low].y if sample_is_nag else sample.y
             else:
                 if sample_is_nag:
-                    y = NAG.load(
+                    with h5py.File(self.processed_paths[i], 'r') as f:
+                        max_low = len(f.keys()) - 1
+                    file_low = min(low, max_low)
+                    if file_low != low:
+                        log.warning(
+                            "Using level-%d instead of level-%d for class weights on '%s' because this NAG is shallower.",
+                            file_low,
+                            low,
+                            self.processed_paths[i])
+                    nag = NAG.load(
                         self.processed_paths[i],
-                        low=low,
+                        low=file_low,
                         keys_low=['y'],
-                        non_fp_to_long=True)[low].y
+                        non_fp_to_long=True)
+                    y = nag[file_low].y
                 else:
                     y = Data.load(
                         self.processed_paths[i],

@@ -751,6 +751,14 @@ class RadiusHorizontalGraph(Transform):
             margin,
             chunk_size,
             verbose=False):
+        data = nag[i_level]
+        if data.edge_index is None or data.edge_index.shape[1] == 0:
+            data.edge_index = torch.empty(
+                (2, 0), dtype=torch.long, device=nag[0].pos.device)
+            data.edge_attr = nag[0].pos.new_empty((0, 7))
+            nag._list[i_level] = data
+            return nag
+
         # Compute 'subedges', i.e. edges between level-0 points making up
         # the edges between the segments. These will be used for edge
         # features computation. NB: this operation simplifies the

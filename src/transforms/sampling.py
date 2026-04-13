@@ -527,23 +527,6 @@ class SampleXYTiling(Transform):
         # Select only the points in the desired tile
         idx = torch.where((xy[:, 0] == self.x) & (xy[:, 1] == self.y))[0]
 
-        # Fallback to the most populated tile if the requested tile is empty.
-        if idx.numel() == 0:
-            tile_id = xy[:, 0] * tiling[1] + xy[:, 1]
-            num_tiles = int((tiling[0] * tiling[1]).item())
-            counts = torch.bincount(tile_id, minlength=num_tiles)
-            fallback_id = counts.argmax()
-            fallback_x = int((fallback_id // tiling[1]).item())
-            fallback_y = int((fallback_id % tiling[1]).item())
-            idx = torch.where(
-                (xy[:, 0] == fallback_x) & (xy[:, 1] == fallback_y))[0]
-
-            logger = logging.getLogger(__name__)
-            logger.warning(
-                f"{self.__class__.__name__}: Requested tile "
-                f"({self.x}, {self.y}) is empty. Falling back to "
-                f"tile ({fallback_x}, {fallback_y}) with {idx.numel()} points.")
-
         return data.select(idx)[0]
 
 

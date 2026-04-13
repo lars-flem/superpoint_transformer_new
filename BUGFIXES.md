@@ -4,12 +4,28 @@ This document outlines all the bug fixes and improvements made to the SuperPoint
 
 ## Summary
 
-A total of **6 critical bug fixes** were implemented to address issues with:
+A total of **10 bug fixes** were implemented to address issues with:
 - Empty graph structures
 - Heterogeneous data batching
 - Hierarchical model architecture mismatch
 - Sparse subtile skipping during preprocessing
 - Degenerate ground candidates causing RANSAC failure
+- Empty point clouds propagating through the transform pipeline
+- Single-node NAG levels crashing horizontal graph construction
+- Empty/degenerate XY tiling producing empty subtiles
+
+| Fix # | Error Type | File | Prevention Method |
+|-------|-----------|------|-------------------|
+| 1 | Empty tensor concatenation in `scatter_nearest_neighbor` | `src/utils/scatter.py` | Early guard check |
+| 2 | Empty tensor concatenation in `subedges` | `src/utils/graph.py` | Early guard check |
+| 3 | KeyError on missing fields in batching | `src/data/data.py` | Dynamic key exclusion |
+| 4 | AssertionError on out-of-range NAG level | `src/models/components/spt.py` | Bounds check |
+| 5 | Crash on sparse/empty subtile | `src/datasets/base.py` | `.skip` sentinel + dataset filtering |
+| 6 | RANSAC ValueError on degenerate ground candidates | `src/utils/ground.py` | `try/except` with flat-plane fallback |
+| 7 | Crash in `GridSampling3D` / `QuantizePointCoordinates` on empty input | `src/transforms/sampling.py` | Early return with empty tensors |
+| 8 | Division-by-zero / empty tile in `SampleXYTiling` | `src/transforms/sampling.py` | Span clamp + fallback to most-populated tile |
+| 9 | Crash in `KNN`, `Inliers`, `Outliers`, `PointFeatures` on 0-point cloud | `src/transforms/neighbors.py`, `point.py` | Early return unchanged |
+| 10 | ValueError in horizontal graph construction for single-node level | `src/transforms/graph.py` | Warn + set empty edge_index |
 
 ---
 
@@ -30,18 +46,11 @@ The function chunked edges for memory efficiency, but when `edge_index.shape[1] 
 **Fix:**
 Added an early guard before the chunking logic:
 ```python
-# Handle empty edge_index early
 if edge_index.shape[1] == 0:
     candidate = torch.empty((0, points.shape[1]), dtype=points.dtype, device=points.device)
     candidate_idx = torch.empty((2, 0), dtype=edge_index.dtype, device=edge_index.device)
     return candidate, candidate_idx
 ```
-
-**Impact:**
-- ✅ Allows graceful handling of disconnected graph components
-- ✅ Prevents crashes when processing sparse or minimal graphs
-- ✅ Returns correctly-shaped empty tensors for downstream processing
-- ⚡ Minor performance benefit: skips unnecessary computation for empty edge lists
 
 ---
 
@@ -57,20 +66,13 @@ edge_index = torch.cat([elt[0] for elt in out_list], dim=1)
 ```
 
 **Fix:**
-Added early return for empty edges **after** the trimming step:
+Added early return for empty edges after the trimming step:
 ```python
-# Handle empty edge_index early
 if edge_index.shape[1] == 0:
     ST_pairs = torch.empty((2, 0), dtype=torch.long, device=points.device)
     ST_uid = torch.empty((0,), dtype=torch.long, device=points.device)
     return edge_index, ST_pairs, ST_uid
 ```
-
-**Impact:**
-- ✅ Handles cases where all edges are self-loops or duplicates after trimming
-- ✅ Prevents cascading failures in superedge feature computation
-- ✅ Returns consistent tensor shapes for batching operations
-- 📊 Occurs when NAG levels have very few nodes or isolated components
 
 ---
 
@@ -84,15 +86,12 @@ When batching data samples from different points in the hierarchy, some samples 
 KeyError: 'super_index'
 ```
 
-**Root Causes:**
-1. Some graph levels don't create superedges (e.g., single-node levels skip horizontal graph construction)
-2. Different data samples have different optional fields set depending on their processing path
-3. PyG's `collate()` function expects all samples to have the same keys
+**Root Cause:**
+Some graph levels don't create superedges (e.g., single-node levels skip horizontal graph construction), so different samples have different optional fields. PyG's `collate()` expects all samples to have the same keys.
 
 **Fix:**
-Dynamically detect and exclude missing keys **before** calling PyG's collate function:
+Dynamically detect and exclude missing keys before calling PyG's collate function:
 ```python
-# Dynamically exclude keys that don't exist in all data objects
 if exclude_keys is None:
     exclude_keys = []
 else:
@@ -103,18 +102,9 @@ for k in data_list[0].to_dict().keys():
         exclude_keys.append(k)
 ```
 
-Also added checks in the two dtype conversion loops to skip keys that don't exist in specific samples:
-```python
-if k not in d:
-    continue
-```
-
-**Impact:**
-- ✅ Enables batching of heterogeneous data samples
-- ✅ Supports variable graph hierarchies within a batch
-- ✅ Gracefully skips optional fields instead of crashing
-- 📊 Essential for datasets where graph structure varies across samples
-- 🔧 Maintains type safety for fields that do exist
+Also added two further guards:
+- `if k not in d: continue` in the dtype conversion loops to skip keys missing from specific samples.
+- `if k not in batch: continue` before the CSRData post-processing loop (line 1257) — if a key was excluded from the batch because it was absent from some samples, accessing `batch[k]` would raise a `KeyError` when trying to convert the accumulated CSRData list.
 
 ---
 
@@ -123,89 +113,20 @@ if k not in d:
 **File:** `src/models/components/spt.py` (lines 823-826)
 
 **Issue:**
-The SuperPoint Transformer model was designed for a fixed number of hierarchical levels, but when data had fewer levels than expected (e.g., due to small point clouds stopping hierarchy expansion early), the model would crash:
+The model was designed for a fixed number of hierarchical levels, but when data had fewer levels than expected (e.g., due to small point clouds stopping hierarchy expansion early), the model would crash:
 ```
 AssertionError: Level 2 is out of range. NAG has levels range(0, 2)
 ```
 
 **Root Cause:**
-The forward loop iterated through all expected down-stages:
-```python
-for i_stage, (stage, node_mlp, ...) in enumerate(self.down_stages):
-    i_level = i_stage + 1 + self.nano
-    # Tries to access nag[2] but NAG only has levels 0-1
-```
-
-The assertion happened after attempting to access the non-existent level.
+The forward loop iterated through all expected down-stages, trying to access NAG levels that didn't exist for sparse inputs.
 
 **Fix:**
-Added a guard check **before** accessing the level:
+Added a guard check before accessing the level:
 ```python
-# Skip this stage if the level doesn't exist in the NAG
 if i_level > nag.end_i_level:
     break
 ```
-
-**Impact:**
-- ✅ Gracefully handles NAGs with fewer levels than model capacity
-- ✅ Model adapts to variable-depth hierarchies
-- ✅ All accumulated down outputs are still used for up-sampling
-- ✅ Prevents crashes on small or sparse point clouds
-- 📊 Critical for datasets with variable-sized scenes
-- 🎯 Maintains full forward-backward compatibility
-
----
-
-## Data Flow Impact Diagram
-
-```
-Raw LiDAR Data (Viken2022)
-    ↓
-Subtile Tiling → Sparse tiles skipped with .skip sentinel [Fix #5]
-    ↓
-Ground Elevation Transform → RANSAC fallback for degenerate tiles [Fix #6]
-    ↓
-Graph Construction (Empty edge guards) [Fixes #1, #2]
-    ↓
-Batch Creation (Key exclusion) [Fix #3]
-    ↓
-Model Forward Pass (Level bounds check) [Fix #4]
-    ↓
-Training/Validation/Test Complete ✓
-```
-
----
-
-## Testing Recommendations
-
-To verify these fixes work correctly, test the following scenarios:
-
-1. **Small Point Clouds:** Test with point clouds that might result in single-node levels
-2. **Sparse Graphs:** Test with scenes that have isolated points or disconnected components
-3. **Variable Batch Composition:** Mix samples with different hierarchy depths in a single batch
-4. **Edge Cases:** Test with empty tiles or very sparse data
-
----
-
-## Error Prevention Summary
-
-| Fix # | Error Type | Severity | Prevention Method |
-|-------|-----------|----------|-------------------|
-| 1 | Empty Tensor Concatenation | High | Early guard check |
-| 2 | Empty Tensor Concatenation | High | Early guard check |
-| 3 | KeyError on Missing Fields | High | Dynamic exclusion |
-| 4 | AssertionError on Out-of-Range Level | High | Bounds checking |
-| 5 | Crash on Sparse/Empty Subtile | High | `.skip` sentinel + dataset filtering |
-| 6 | RANSAC ValueError on Degenerate Ground | High | `try/except` with flat-plane fallback |
-
----
-
-## Notes
-
-- All fixes maintain backward compatibility with existing code
-- No changes to model architecture or training procedures
-- Fixes are defensive programming patterns that handle edge cases
-- Documentation updated in `/memories/repo/preprocessing-notes.md`
 
 ---
 
@@ -214,16 +135,10 @@ To verify these fixes work correctly, test the following scenarios:
 **File:** `src/datasets/base.py`
 
 **Issue:**
-When tiling large LiDAR tiles (e.g. over water bodies or empty terrain) into subtiles, some subtiles would have too few points to produce a valid graph hierarchy. This caused crashes deep in the preprocessing pipeline (graph construction, neighbor search, etc.) and required the entire tile to be reprocessed on each run.
-
-**Root Cause:**
-The base dataset had no mechanism to:
-1. Detect and skip sparse subtiles before costly preprocessing
-2. Remember that a subtile had been skipped, causing repeated crash-and-retry on subsequent runs
+When tiling large LiDAR tiles (e.g. over water bodies or empty terrain) into subtiles, some subtiles would have too few points to produce a valid graph hierarchy. This caused crashes deep in the preprocessing pipeline and required the entire tile to be reprocessed on each run.
 
 **Fix:**
-Added a `min_points_per_subtile` parameter to `BaseDataset.__init__`. During preprocessing, if a tiled subtile has fewer than this threshold, a `.skip` sentinel file is written alongside where the `.h5` would have been:
-
+Added a `min_points_per_subtile` parameter to `BaseDataset.__init__`. During preprocessing, if a subtile has fewer points than the threshold, a `.skip` sentinel file is written in place of the `.h5`:
 ```python
 if n_pts < self._min_points_per_subtile:
     skip_path = cloud_path.replace('.h5', '.skip')
@@ -231,19 +146,13 @@ if n_pts < self._min_points_per_subtile:
     return
 ```
 
-The sentinel is then respected on future runs (no reprocessing) and throughout the dataset via three supporting additions:
-
+Three supporting additions respect the sentinel throughout the dataset:
 - **`_skip_path()`** — resolves the expected sentinel path for any cloud_id/stage.
-- **`processed_file_names`** — returns the `.skip` path (instead of `.h5`) for skipped tiles so PyG's existence check passes without requiring the actual data file.
-- **`_valid_processed_paths`** — new property returning only the `.h5` paths for non-skipped tiles. Used in `__getitem__`, in-memory loading, and class weight computation instead of `processed_paths`.
-- **`cloud_ids`** — updated to exclude skipped tiles, so dataset length and indexing are consistent.
+- **`processed_file_names`** — returns the `.skip` path for skipped tiles so PyG's existence check passes.
+- **`_valid_processed_paths`** — returns only `.h5` paths for non-skipped tiles; used in `__getitem__`, in-memory loading, and class weight computation.
+- **`cloud_ids`** — updated to exclude skipped tiles so dataset length and indexing are consistent.
 
-**Impact:**
-- ✅ Sparse/empty subtiles (e.g. water surfaces) are silently skipped without crashing
-- ✅ Sentinel prevents re-attempting preprocessing on already-skipped tiles
-- ✅ Skipped subtiles are excluded from train, val, and test — the model never sees them
-- ✅ Class weight computation and in-memory loading use the corrected path list
-- 📊 Controlled via `min_points_per_subtile` in the datamodule config (set to 0 to disable)
+Controlled via `min_points_per_subtile` in the datamodule config (set to 0 to disable).
 
 ---
 
@@ -252,24 +161,21 @@ The sentinel is then respected on future runs (no reprocessing) and throughout t
 **File:** `src/utils/ground.py` (`single_plane_model`, line ~140)
 
 **Issue:**
-During preprocessing, the `GroundElevation` transform filters points by verticality, Z-distance, and local Z-min to isolate ground candidates before fitting a plane with RANSAC. On some tiles (e.g. sparse terrain or water tiles), all surviving ground-candidate points share near-identical XY coordinates. sklearn's `RANSACRegressor` needs at least 2 points with distinct XY to fit a `LinearRegression` model; when every random 2-point sub-sample is degenerate, it skips all `max_trials` iterations and raises:
+On some tiles (e.g. sparse terrain or water tiles), all surviving ground-candidate points share near-identical XY coordinates. sklearn's `RANSACRegressor` needs at least 2 points with distinct XY to fit a `LinearRegression` model; when every random sub-sample is degenerate, it raises:
 ```
-ValueError: RANSAC could not find a valid consensus set. All `max_trials` iterations
-were skipped because each randomly chosen sub-sample failed the passing criteria.
+ValueError: RANSAC could not find a valid consensus set.
 ```
 First observed on tile `32-1-510-131-63.laz` after ~8 hours of preprocessing (tile 396/588).
 
 **Root Cause:**
-The existing guard (`if len(pos) < 3`) only protected against too-few points. It did not handle the case where ≥ 3 points are present but degenerate in XY (collinear or coincident), which causes RANSAC itself to fail internally.
+The existing guard (`if len(pos) < 3`) only protected against too-few points, not against ≥ 3 XY-degenerate points.
 
 **Fix:**
 Wrapped the RANSAC fit in a `try/except ValueError` with a flat-plane fallback at the mean Z of the candidate ground points:
 ```python
 try:
     ransac = RANSACRegressor(...).fit(xy, z)
-    def predict_elevation(pos_query):
-        ...
-        return z - torch.from_numpy(ransac.predict(xy.cpu().numpy())).to(device)
+    def predict_elevation(pos_query): ...
 except ValueError:
     z_mean = float(z.mean())
     print(f"WARNING: RANSAC could not find a valid consensus set. "
@@ -278,8 +184,72 @@ except ValueError:
         return pos_query[:, 2] - z_mean
 ```
 
-**Impact:**
-- ✅ Prevents crash on tiles where filtered ground candidates are XY-degenerate
-- ✅ Falls back gracefully to a horizontal plane — reasonable for flat/water tiles
-- ✅ Preprocessing continues without manual intervention
-- 📊 A `UndefinedMetricWarning: R^2 score is not well-defined with less than two samples` from sklearn is a related but benign warning (RANSAC's internal scoring on a tiny inlier set) — not the same as this crash
+Note: a `UndefinedMetricWarning: R^2 score is not well-defined with less than two samples` from sklearn is a related but benign warning — not the same crash.
+
+---
+
+## 7. Empty Input Guards in GridSampling3D and QuantizePointCoordinates
+
+**File:** `src/transforms/sampling.py`
+
+**Issue:**
+`torch_cluster.grid_cluster` (used internally by both transforms) does not support empty input tensors. When a 0-point cloud reached either transform, it crashed.
+
+**Fix:**
+Added early-return guards at the top of each transform's `_process` method. For `GridSampling3D`, the data is returned unchanged (with `coords` and `grid_size` set). For `QuantizePointCoordinates`, an empty NAG is constructed and returned.
+
+---
+
+## 8. Division-by-Zero and Empty-Tile Fallback in SampleXYTiling
+
+**File:** `src/transforms/sampling.py`
+
+**Issue:**
+Two separate failure modes in `SampleXYTiling._process`:
+1. When all points share the same XY coordinate (zero spatial span), dividing by the span produced NaN/inf, placing all points in tile (0, 0) and leaving all requested tiles empty.
+2. When the requested tile `(x, y)` contained no points, the empty selection crashed downstream.
+
+**Fix:**
+- **Span clamp:** `torch.where(span > 0, span, ones_like(span))` to avoid division by zero.
+- **Upper-boundary clip:** Use `1 - eps` as the clip max so points on the upper edge stay in the last tile.
+- **Empty-tile fallback:** If `idx.numel() == 0`, fall back to the tile with the most points (`counts.argmax()`), with a warning log.
+- **Empty input guard:** Return immediately if the input cloud has 0 points.
+
+---
+
+## 9. Empty Point Cloud Guards in Neighbor and Feature Transforms
+
+**Files:** `src/transforms/neighbors.py`, `src/transforms/point.py`
+
+**Issue:**
+When an empty point cloud (0 points) reached `KNN`, `Inliers`, `Outliers`, or `PointFeatures`, each crashed because their internal routines assumed at least one point.
+
+**Fix:**
+Added early-return guards at the top of each `_process` method:
+- `KNN`: initialises empty `neighbor_index`, `neighbor_distance` (and optionally `neighbors` as a CSRData) then returns.
+- `Inliers` / `Outliers`: returns `data` unchanged.
+- `PointFeatures`: returns `data` unchanged after logging a warning.
+
+---
+
+## 10. Single-Node Level Guard in Horizontal Graph Construction
+
+**File:** `src/transforms/graph.py` (`_horizontal_graph_by_radius_for_single_level`)
+
+**Issue:**
+When a NAG level contained only one superpoint node, the horizontal graph builder raised:
+```python
+ValueError: Input NAG only has 1 node at level=X. Cannot compute radius-based horizontal graph.
+```
+
+**Fix:**
+Replaced the `raise ValueError` with a logged warning, then set `data.edge_index` to an empty `(2, 0)` tensor and `data.edge_attr = None` before returning the NAG unchanged:
+```python
+log.warning(f"NAG only has {num_nodes} node(s) at level={i_level}. Skipping horizontal graph construction.")
+data.edge_index = torch.zeros((2, 0), dtype=torch.long, device=data.pos.device)
+data.edge_attr = None
+nag._list[i_level] = data
+return nag
+```
+
+The empty edge_index produced here is handled downstream by fix #2.

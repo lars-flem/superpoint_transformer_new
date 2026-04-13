@@ -1254,6 +1254,8 @@ class Batch(PyGBatch, Data):
         # breaking PyG Batch mechanisms
         for k, v in data_list[0].to_dict().items():
             if isinstance(v, CSRData):
+                if k not in batch:
+                    continue
                 batch[k] = v.get_batch_class().from_list(batch[k])
 
         return batch

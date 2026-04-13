@@ -2,10 +2,11 @@
 import os
 import os.path as osp
 import logging
-from typing import List, Dict
+from typing import List, Dict, Tuple
 import numpy as np
 import torch
 import laspy
+from itertools import product
 
 import torch.multiprocessing
 torch.multiprocessing.set_sharing_strategy('file_system')
@@ -18,7 +19,7 @@ from src.utils.color import to_float_rgb
 DIR = os.path.dirname(os.path.realpath(__file__))
 log = logging.getLogger(__name__)
 
-__all__ = ['NorwayBinaryALS', 'MiniNorwayBinaryALS']
+__all__ = ['NorwayALS', 'MiniNorwayALS']
 
 
 def read_norway_laz(path: str, rgb: bool = False) -> Data:
@@ -68,15 +69,29 @@ def read_norway_laz(path: str, rgb: bool = False) -> Data:
     return data
 
 
-class NorwayBinaryALS(BaseDataset):
+class NorwayALS(BaseDataset):
 
-    def __init__(self, *args, rgb: bool = True, **kwargs):
+    def __init__(
+            self,
+            root: str,
+            *args,
+            rgb: bool = True,
+            min_tiled_points: int = 2,
+            **kwargs):
         """
         :param rgb: bool
             Whether RGB colors should be loaded from LAZ files, if available
+        :param min_tiled_points: int
+            XY-subtiles with fewer points than this are excluded before
+            preprocessing so they never reach graph construction.
         """
         self.rgb = rgb
-        super().__init__(*args, **kwargs)
+        self.min_tiled_points = max(int(min_tiled_points), 0)
+        self._prescan_root = osp.join(root, self.data_subdir_name, 'raw')
+        self._tile_point_count_cache: Dict[
+            Tuple[str, str, Tuple[int, int]], Dict[Tuple[int, int], int]] = {}
+        self._all_cloud_ids_cache = None
+        super().__init__(root, *args, **kwargs)
 
     @property 
     def data_subdir_name(self) -> str:
@@ -85,7 +100,7 @@ class NorwayBinaryALS(BaseDataset):
 
     @property
     def class_names(self) -> List[str]:
-        return CLASS_NAMES  # length = num_classes + 1 (last = ignored)
+        return CLASS_NAMES
 
     @property
     def num_classes(self) -> int:
@@ -103,6 +118,94 @@ class NorwayBinaryALS(BaseDataset):
     @property
     def all_base_cloud_ids(self) -> Dict[str, List[str]]:
         return TILES
+
+    @property
+    def all_cloud_ids(self) -> Dict[str, List[str]]:
+        if self._all_cloud_ids_cache is not None:
+            return self._all_cloud_ids_cache
+
+        if self.xy_tiling is None:
+            if self.pc_tiling is not None:
+                num_tiles = 2 ** self.pc_tiling
+                self._all_cloud_ids_cache = {
+                    stage: [
+                        f'{ci}__TILE_{x + 1}_OF_{num_tiles}'
+                        for ci in ids
+                        for x in range(num_tiles)]
+                    for stage, ids in self.all_base_cloud_ids.items()}
+            else:
+                self._all_cloud_ids_cache = self.all_base_cloud_ids
+            return self._all_cloud_ids_cache
+
+        tx, ty = self.xy_tiling
+        filtered = {}
+        skipped = []
+        for stage, ids in self.all_base_cloud_ids.items():
+            stage_ids = []
+            for cloud_id in ids:
+                # Pre-scan each raw tile once so empty or near-empty XY subtiles
+                # never make it into processed_paths or preprocessing.
+                counts = self._xy_tile_point_counts(stage, cloud_id, (tx, ty))
+                for x, y in product(range(tx), range(ty)):
+                    count = counts[(x, y)]
+                    tiled_id = f'{cloud_id}__TILE_{x + 1}-{y + 1}_OF_{tx}-{ty}'
+                    if count < self.min_tiled_points:
+                        skipped.append((stage, tiled_id, count))
+                        continue
+                    stage_ids.append(tiled_id)
+            filtered[stage] = stage_ids
+
+        for stage, tiled_id, count in skipped:
+            log.warning(
+                "Skipping subtile '%s' from stage '%s' because it only has %d point(s) after XY tiling.",
+                tiled_id,
+                stage,
+                count)
+
+        self._all_cloud_ids_cache = filtered
+        return self._all_cloud_ids_cache
+
+    def _xy_tile_point_counts(
+            self,
+            stage: str,
+            cloud_id: str,
+            tiling: Tuple[int, int]) -> Dict[Tuple[int, int], int]:
+        key = (stage, cloud_id, tiling)
+        if key in self._tile_point_count_cache:
+            return self._tile_point_count_cache[key]
+
+        raw_path = osp.join(self._prescan_root, stage, cloud_id + '.laz')
+        tx, ty = tiling
+        counts = {(x, y): 0 for x, y in product(range(tx), range(ty))}
+
+        with laspy.open(raw_path) as handle:
+            xmin, ymin, _ = handle.header.mins
+            xmax, ymax, _ = handle.header.maxs
+            width = float(xmax - xmin)
+            height = float(ymax - ymin)
+
+            for points in handle.chunk_iterator(1_000_000):
+                x = np.asarray(points.x)
+                y = np.asarray(points.y)
+                # Match SampleXYTiling's bucketization closely enough to decide
+                # which subtiles are too small to keep before preprocessing.
+                if width > 0:
+                    x_idx = np.floor(np.clip((x - xmin) / width, 0, 1) * tx).astype(np.int64)
+                else:
+                    x_idx = np.zeros(x.shape[0], dtype=np.int64)
+                if height > 0:
+                    y_idx = np.floor(np.clip((y - ymin) / height, 0, 1) * ty).astype(np.int64)
+                else:
+                    y_idx = np.zeros(y.shape[0], dtype=np.int64)
+
+                valid = (x_idx >= 0) & (x_idx < tx) & (y_idx >= 0) & (y_idx < ty)
+                x_idx = x_idx[valid]
+                y_idx = y_idx[valid]
+                for x_tile, y_tile in zip(x_idx.tolist(), y_idx.tolist()):
+                    counts[(x_tile, y_tile)] += 1
+
+        self._tile_point_count_cache[key] = counts
+        return counts
 
     def download_dataset(self) -> None:
         raise RuntimeError(
@@ -154,7 +257,7 @@ class NorwayBinaryALS(BaseDataset):
         return osp.join(self.raw_dir, raw_split, base_cloud_id + ".laz")
 
 
-class MiniNorwayBinaryALS(NorwayBinaryALS):
+class MiniNorwayALS(NorwayALS):
     _NUM_MINI = 2
 
     @property

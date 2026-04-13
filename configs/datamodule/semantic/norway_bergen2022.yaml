@@ -2,15 +2,15 @@
 defaults:
   - /datamodule/semantic/default.yaml
 
-_target_: src.datamodules.norway_binary.NorwayBinaryDataModule
+_target_: src.datamodules.norway.NorwayDataModule
 
 # These parameters are not actually used by the DataModule, but are used
 # here to facilitate model parameterization with config interpolation
-num_classes: 4
+num_classes: 2
 stuff_classes: [0, 1]
 trainval: False
 val_on_test: False
-xy_tiling: 1  # No tiling - 266 files is already massive dataset
+xy_tiling: 2  # No tiling - 266 files is already massive dataset
 
 
 # point features used for the partition
@@ -59,7 +59,7 @@ v_edge_hf: []  # vertical edge features used for training
 
 # Parameters declared here to facilitate tuning configs without copying
 # all the pre_transforms
-voxel: 0.2  # samme som gammel config
+voxel: 0.1  # samme som gammel config
 knn: 25
 knn_r: 10
 knn_step: -1
@@ -122,3 +122,9 @@ drop_to_mean: False
 rgb_jitter: 0.0 
 rgb_autocontrast: 0.0
 rgb_drop: 0.0
+
+
+rgb: False  # Turn of for now
+#rgb_jitter: 0
+#rgb_autocontrast: 0.5
+#rgb_drop: 0.3

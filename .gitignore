@@ -172,3 +172,4 @@ local
 ckpt
 outputs
 wandb
+notebooks/

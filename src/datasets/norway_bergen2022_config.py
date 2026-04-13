@@ -4,17 +4,26 @@ import numpy as np
 # BERGEN 2022 10PKT - TILES SPLIT  
 # Total: 259 tiles - Train: 179, Val: 40, Test: 40
 
-
+"""
 TILES = {
     "train": [
+        #"32-1-468-144-12", #Veldig få punkter, en helt tom subtile med xy_tileing=2
         "32-1-467-145-25",  # Central Bergen area - mixed urban
         "32-1-468-145-25",  # Central area - likely buildings + infrastructure
+        "32-1-467-144-24", "32-1-467-144-26", "32-1-467-144-27",
+        "32-1-467-145-32", "32-1-467-145-33", "32-1-467-145-35", "32-1-467-145-36",
+        "32-1-468-144-14",
+        "32-1-468-144-15",
+        "32-1-468-144-17",
+
     ],
     "val": [
-        "32-1-467-144-25",  # Already in val/ - central Bergen area  
+        "32-1-467-144-25",  # Already in val/ - central Bergen area 
+        "32-1-467-144-13", "32-1-467-144-17"
     ],
     "test": [
-        "32-1-468-145-07",  # From same good area as train tiles - should have valid classes
+        "32-1-468-145-07",
+         "32-1-467-146-20", "32-1-467-146-31"
     ],
 }
 
@@ -43,16 +52,20 @@ TILES = {
         "32-1-467-145-72", "32-1-467-145-73", "32-1-467-145-75", "32-1-467-145-76",
         
         # 467-146 series (selected) 
-        "32-1-467-146-10", "32-1-467-146-21", "32-1-467-146-30", "32-1-467-146-40",
+        "32-1-467-146-10", 
+        #"32-1-467-146-21", #Bare vann
+        "32-1-467-146-30", "32-1-467-146-40",
         "32-1-467-146-42", "32-1-467-146-50", "32-1-467-146-52", "32-1-467-146-60",
-        "32-1-467-146-62", "32-1-467-146-70", "32-1-467-146-75", "32-1-467-146-77",
+        #"32-1-467-146-62", #Bare vann
+        "32-1-467-146-70", "32-1-467-146-75", "32-1-467-146-77",
         
         # 467-147 series
         "32-1-467-147-70", "32-1-467-147-72", "32-1-467-147-73",
         
         # 468-144 series (selected)
         "32-1-468-144-02", "32-1-468-144-04", "32-1-468-144-05", "32-1-468-144-07",
-        "32-1-468-144-12", "32-1-468-144-14", "32-1-468-144-15", "32-1-468-144-17",
+        #"32-1-468-144-12", #Bare vann
+        "32-1-468-144-14", "32-1-468-144-15", "32-1-468-144-17",
         "32-1-468-144-23", "32-1-468-144-25", "32-1-468-144-26", "32-1-468-144-35",
         "32-1-468-144-37", "32-1-468-144-46",
         
@@ -119,16 +132,15 @@ TILES = {
     ]
 }
 
-"""
+
 
 # mapping fra LAS classification (0-255) -> train id
 # 0 = ground
 # 1 = not_ground
 # 2 = building
-# 3 = bridge
-# 4 = ignored
+# 3 = ignored 
 
-ID2TRAINID = np.full(256, 4, dtype=np.int64)  # default: ignored
+ID2TRAINID = np.full(256, 2, dtype=np.int64)  # default: ignored
 
 # Ground
 ID2TRAINID[2] = 0
@@ -139,33 +151,32 @@ ID2TRAINID[4]  = 1   # Medium vegetation
 ID2TRAINID[5]  = 1   # High vegetation
 ID2TRAINID[14] = 1   # Powerlines
 ID2TRAINID[15] = 1   # Transmission tower
+ID2TRAINID[17] = 1   # Bridge
 
 # Buildings
-ID2TRAINID[6] = 2
+ID2TRAINID[6] = 1
 
-# Bridge
-ID2TRAINID[17] = 3
 
 # ignored
-ID2TRAINID[1] = 4   # unclassified
-ID2TRAINID[7] = 4   # noise
-ID2TRAINID[9] = 4   # water
-# Klasse 1 og 7 forblir 3 (ignored)
+ID2TRAINID[1] = 2   # unclassified
+ID2TRAINID[7] = 2   # noise
+ID2TRAINID[9] = 2   # water
+# Klasse 1 og 7 forblir 2 (ignored)
 
 CLASS_NAMES = [
     "ground",
     "not_ground",
-    "building",
-    "bridge",
+    #"building",
+    #"bridge",
     "ignored"
 ]
 
 CLASS_COLORS = [
     [140, 90, 60],    # ground (brown)
     [180, 180, 180],  # not_ground (grey)
-    [220, 20, 60],    # building (red)
-    [0, 0, 255],      # bridge (blue)
+    #[220, 20, 60],    # building (red)
+    #[0, 0, 255],      # bridge (blue)
     [0, 0, 0],        # ignored
 ]
 
-NOR_NUM_CLASSES = 4
+NOR_NUM_CLASSES = 2

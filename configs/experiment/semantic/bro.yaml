@@ -1,0 +1,27 @@
+# @package _global_
+
+# to execute this experiment run:
+# python src/train.py experiment=semantic/bro
+
+defaults:
+  - override /datamodule: semantic/bro.yaml
+  - override /model: semantic/spt-2.yaml
+  - override /trainer: gpu.yaml
+
+trainer:
+  max_epochs: 400
+
+model:
+  weighted_loss_smooth: 'log'
+  criterion:
+    _target_: torch.nn.CrossEntropyLoss
+    ignore_index: ${datamodule.num_classes}
+    label_smoothing: 0.1
+  optimizer:
+    lr: 0.01
+    weight_decay: 1e-4
+
+logger:
+  wandb:
+    project: "spt_bro"
+    name: "SPT-64"

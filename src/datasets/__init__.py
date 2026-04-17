@@ -7,3 +7,4 @@ from .s3dis_room import *
 from .scannet import *
 from .norway_binary import *
 from .trondheim import *
+from .bro import *

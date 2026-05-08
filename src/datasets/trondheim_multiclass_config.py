@@ -1,11 +1,7 @@
 import numpy as np
 
 # IDs must match file names in raw/{train,val,test}/ without the .laz suffix.
-#
-# Spatial split strategy (50 tiles total):
-#   train (35): 510-215 block (all 18) + 511-215 rows 00-07 (8) + rows 20-23 (4) + rows 33-37 (5)
-#   val   ( 8): 511-215 rows 10-17
-#   test  ( 7): 511-215 rows 24-27 (4) + 511-216 block (3)
+# Same spatial train/val/test split as the binary trondheim experiment.
 
 TILES = {
     "train": [
@@ -44,39 +40,34 @@ TILES = {
 }
 
 # Mapping from LAS classification (0-255) -> train id.
-# 0 = ground, 1 = not_ground, 2 = ignored.
-#
-# Classes present in Trondheim 30pkt data:
-#   1  → Unclassified (58%) — mapped to ignored (mix of ground and not_ground)
-#   2  → Ground (18%)
-#   3  → Low vegetation (4%)
-#   4  → Medium vegetation (5%)
-#   5  → High vegetation (15%)
-#   7  → Low point / noise (0.05%)
-#   17 → Bridge (0.2%)
-#
-# Classes 6 (building), 9 (water), 14-15 (powerlines/towers), 23 (grass)
-# are NOT present in this dataset.
-ID2TRAINID = np.full(256, 2, dtype=np.int64)  # default: ignored
+# Classes present in Trondheim data:
+#   1  → Unclassified (58%) — ignored
+#   2  → Ground (18%)       → class 0
+#   3  → Low vegetation (4%) → class 1
+#   4  → Medium vegetation (5%) → class 2
+#   5  → High vegetation (15%) → class 3
+#   7  → Noise (0.05%)      — ignored
+#   17 → Bridge (0.2%)      → class 4
+ID2TRAINID = np.full(256, 5, dtype=np.int64)  # default: ignored
 
-# Ground
 ID2TRAINID[2] = 0   # Ground
-
-# Not ground
 ID2TRAINID[3] = 1   # Low vegetation
-ID2TRAINID[4] = 1   # Medium vegetation
-ID2TRAINID[5] = 1   # High vegetation
-ID2TRAINID[17] = 1  # Bridge
+ID2TRAINID[4] = 2   # Medium vegetation
+ID2TRAINID[5] = 3   # High vegetation
+ID2TRAINID[17] = 4  # Bridge
 
-# Ignored
-ID2TRAINID[1] = 2   # Unclassified
-ID2TRAINID[7] = 2   # Low point (noise)
+# Explicitly ignored
+ID2TRAINID[1] = 5   # Unclassified
+ID2TRAINID[7] = 5   # Low point (noise)
 
-CLASS_NAMES = ["ground", "not_ground", "ignored"]
+CLASS_NAMES = ["ground", "low_veg", "med_veg", "high_veg", "bridge", "ignored"]
 CLASS_COLORS = [
     [140, 90, 60],    # ground: brown
-    [180, 180, 180],  # not_ground: grey
+    [144, 238, 144],  # low_veg: light green
+    [34, 139, 34],    # med_veg: medium green
+    [0, 80, 0],       # high_veg: dark green
+    [255, 128, 0],    # bridge: orange
     [0, 0, 0],        # ignored: black
 ]
 
-TRONDHEIM_NUM_CLASSES = 2
+TRONDHEIM_MULTICLASS_NUM_CLASSES = 5

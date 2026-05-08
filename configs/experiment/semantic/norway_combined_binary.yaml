@@ -1,10 +1,10 @@
 # @package _global_
 
 # to execute this experiment run:
-# python src/train.py experiment=semantic/trondheim20
+# sbatch scripts/train_norway_combined_binary.sbatch
 
 defaults:
-  - override /datamodule: semantic/trondheim.yaml
+  - override /datamodule: semantic/norway_combined_binary.yaml
   - override /model: semantic/spt-2.yaml
   - override /trainer: gpu.yaml
 
@@ -26,5 +26,5 @@ model:
 
 logger:
   wandb:
-    project: "spt_trondheim"
-    name: "SPT-64-20pkt"
+    project: "spt_norway_combined"
+    name: "SPT-64-binary"

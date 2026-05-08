@@ -1,8 +1,9 @@
 #!/bin/bash
-#SBATCH --job-name=spt_trondheim10
+#SBATCH --job-name=spt_trondheim5
 #SBATCH --time=72:00:00
 #SBATCH --partition=GPUQ
 #SBATCH --gres=gpu:a100:1
+#SBATCH --gres-flags=enforce-binding
 #SBATCH --mem=120G
 #SBATCH --cpus-per-task=10
 
@@ -20,15 +21,15 @@ conda activate sptez
 cd /cluster/home/jakobep/superpoint_transformer_new
 
 # Uncomment to force re-preprocessing from raw files.
-# rm -rf /cluster/home/jakobep/datasets/trondheim10/processed/
+# rm -rf /cluster/home/jakobep/datasets/trondheim5/processed/
 
 python src/train.py \
-    experiment=semantic/trondheim10 \
+    experiment=semantic/trondheim5 \
     datamodule=semantic/trondheim \
-    paths.data_dir=/cluster/home/jakobep/datasets/trondheim10 \
+    paths.data_dir=/cluster/home/jakobep/datasets/trondheim5 \
     trainer.check_val_every_n_epoch=5 \
     callbacks.model_checkpoint.save_last=True \
     callbacks.model_checkpoint.every_n_epochs=5 \
     callbacks.model_checkpoint.monitor=null \
     test=True \
-    logger=csv
+    logger=many_loggers

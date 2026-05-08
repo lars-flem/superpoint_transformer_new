@@ -9,7 +9,7 @@ defaults:
   - override /trainer: gpu.yaml
 
 datamodule:
-  xy_tiling: 2
+  xy_tiling: 3
 
 callbacks:
   gradient_accumulator:

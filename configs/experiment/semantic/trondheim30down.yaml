@@ -1,7 +1,7 @@
 # @package _global_
 
 # to execute this experiment run:
-# python src/train.py experiment=semantic/trondheim20
+# python src/train.py experiment=semantic/trondheim30down
 
 defaults:
   - override /datamodule: semantic/trondheim.yaml
@@ -27,4 +27,4 @@ model:
 logger:
   wandb:
     project: "spt_trondheim"
-    name: "SPT-64-20pkt"
+    name: "SPT-64-30pkt-down"

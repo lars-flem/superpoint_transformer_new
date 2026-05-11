@@ -172,4 +172,5 @@ local
 ckpt
 outputs
 wandb
+visualizations/*
 notebooks/

@@ -2,19 +2,15 @@
 defaults:
   - /datamodule/semantic/default.yaml
 
-_target_: src.datamodules.trondheim.TrondheimDataModule
+_target_: src.datamodules.trondheim_multiclass.TrondheimMulticlassDataModule
 
 # These parameters are not actually used by the DataModule, but are used
 # here to facilitate model parameterization with config interpolation.
-num_classes: 2
-stuff_classes: [0, 1]
+num_classes: 5
+stuff_classes: [0, 1, 2, 3, 4]
 trainval: False
 val_on_test: False
 xy_tiling: 3
-# Subtiles with fewer points than this threshold are skipped during
-# preprocessing (writes a .skip sentinel instead of a .h5 file).
-# Useful for water-heavy tiles where corners can be nearly empty.
-# Set to 0 to disable.
 min_points_per_subtile: 1000
 
 # point features used for the partition
@@ -118,7 +114,6 @@ h_edge_row_drop: 0
 v_edge_row_drop: 0
 drop_to_mean: False
 
-# RGB: Trondheim 30pkt data may not have RGB — set False to be safe
 rgb: False
 rgb_jitter: 0
 rgb_autocontrast: 0.5

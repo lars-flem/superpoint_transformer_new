@@ -23,7 +23,7 @@ A total of **10 bug fixes** were implemented to address issues with:
 | 5 | Crash on sparse/empty subtile | `src/datasets/base.py` | `.skip` sentinel + dataset filtering |
 | 6 | RANSAC ValueError on degenerate ground candidates | `src/utils/ground.py` | `try/except` with flat-plane fallback |
 | 7 | Crash in `GridSampling3D` / `QuantizePointCoordinates` on empty input | `src/transforms/sampling.py` | Early return with empty tensors |
-| 8 | Division-by-zero / empty tile in `SampleXYTiling` | `src/transforms/sampling.py` | Span clamp + fallback to most-populated tile |
+| 8 | Division-by-zero / empty tile in `SampleXYTiling` | `src/transforms/sampling.py` | Span clamp + empty-input guard (empty-tile fallback later removed; superseded by fix #5) |
 | 9 | Crash in `KNN`, `Inliers`, `Outliers`, `PointFeatures` on 0-point cloud | `src/transforms/neighbors.py`, `point.py` | Early return unchanged |
 | 10 | ValueError in horizontal graph construction for single-node level | `src/transforms/graph.py` | Warn + set empty edge_index |
 
@@ -212,8 +212,12 @@ Two separate failure modes in `SampleXYTiling._process`:
 **Fix:**
 - **Span clamp:** `torch.where(span > 0, span, ones_like(span))` to avoid division by zero.
 - **Upper-boundary clip:** Use `1 - eps` as the clip max so points on the upper edge stay in the last tile.
-- **Empty-tile fallback:** If `idx.numel() == 0`, fall back to the tile with the most points (`counts.argmax()`), with a warning log.
 - **Empty input guard:** Return immediately if the input cloud has 0 points.
+- ~~**Empty-tile fallback:** If `idx.numel() == 0`, fall back to the tile with the most points (`counts.argmax()`), with a warning log.~~ *(removed — see below)*
+
+**Removed sub-fix:** *Empty-tile fallback*
+
+An earlier version of this fix also added a `counts.argmax()` fallback that, when the requested `(x, y)` tile had no points, returned the most-populated tile instead. This was later removed: with fix #5 (`.skip` sentinel for sparse subtiles), empty subtiles are now caught upstream and never reach `SampleXYTiling`, making the fallback redundant. Silently substituting a different tile also masked legitimate configuration issues, so removing it makes preprocessing failures more visible.
 
 ---
 

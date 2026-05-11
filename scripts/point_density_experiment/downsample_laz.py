@@ -96,11 +96,29 @@ def downsample_laz(
         f"({actual_density:.1f} pkt/m²)"
     )
 
-    # Write output LAZ preserving all point format dimensions
+    # Write output LAZ preserving all point format dimensions.
+    # Build a fresh header (don't reuse the source header object) so the
+    # written point_count actually reflects the kept points — reusing the
+    # in-memory source header has been observed to leave point_count=0
+    # in the written file with this laspy version.
     os.makedirs(osp.dirname(output_path), exist_ok=True)
-    out_las = laspy.LasData(header=las.header)
-    out_las.points = las.points[keep]
+    out_header = laspy.LasHeader(
+        point_format=las.header.point_format,
+        version=las.header.version,
+    )
+    out_header.offsets = las.header.offsets
+    out_header.scales = las.header.scales
+    out_las = laspy.LasData(header=out_header)
+    out_las.points = las.points[keep].copy()
     out_las.write(output_path)
+
+    # Sanity-check: re-read and confirm the file is well-formed.
+    verify = laspy.read(output_path)
+    if verify.header.point_count != n_out:
+        raise RuntimeError(
+            f"{output_path}: wrote {n_out} points but header reports "
+            f"{verify.header.point_count}"
+        )
 
 
 def process_directory(

@@ -1,6 +1,6 @@
 #!/bin/bash
 #SBATCH --job-name=spt_bro
-#SBATCH --time=16:00:00
+#SBATCH --time=1:00:00
 #SBATCH --partition=GPUQ
 #SBATCH --gres=gpu:a100:1
 #SBATCH --mem=80G
@@ -31,5 +31,6 @@ python src/train.py \
     callbacks.model_checkpoint.save_last=True \
     callbacks.model_checkpoint.every_n_epochs=5 \
     callbacks.model_checkpoint.monitor=null \
+    ckpt_path=/cluster/home/larshfle/superpoint_transformer_new/logs/train/runs/2026-05-05_05-24-36/checkpoints/epoch_389.ckpt \
     test=True \
     2>&1 | tee /tmp/train_bro_output.log

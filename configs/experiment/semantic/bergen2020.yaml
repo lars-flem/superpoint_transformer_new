@@ -1,0 +1,20 @@
+# @package _global_
+# python src/train.py experiment=semantic/bergen2020
+
+defaults:
+  - override /datamodule: semantic/bergen2020.yaml
+  - override /model: semantic/spt-2.yaml
+  - override /trainer: gpu.yaml
+
+trainer:
+  max_epochs: 400
+
+model:
+  optimizer:
+    lr: 0.01
+    weight_decay: 1e-4
+
+logger:
+  wandb:
+    project: "spt_bergen2020"
+    name: "3class-RGB"

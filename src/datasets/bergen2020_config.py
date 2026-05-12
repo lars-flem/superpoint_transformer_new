@@ -43,7 +43,7 @@ BERGEN2020_NUM_CLASSES = 3
 CLASS_NAMES = ["ground", "not_ground", "building", "ignored"]
 CLASS_COLORS = [
     [140, 90, 60],    # ground (brown)
-    [120, 180, 80],   # not_ground (green)
-    [220, 20, 60],    # building (red)
+    [180, 180, 180],  # not_ground (grey)
+    [255, 215, 0],    # building (yellow)
     [0, 0, 0],        # ignored
 ]

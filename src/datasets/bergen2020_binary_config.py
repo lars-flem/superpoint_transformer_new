@@ -33,6 +33,6 @@ BERGEN2020_BINARY_NUM_CLASSES = 2
 CLASS_NAMES = ["ground", "not_ground", "ignored"]
 CLASS_COLORS = [
     [140, 90, 60],    # ground (brown)
-    [120, 180, 80],   # not_ground (green)
+    [180, 180, 180],  # not_ground (grey)
     [0, 0, 0],        # ignored
 ]

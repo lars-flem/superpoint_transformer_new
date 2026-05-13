@@ -33,7 +33,9 @@ ID2TRAINID[5] = 1    # Høy vegetasjon
 ID2TRAINID[13] = 1   # Ledning beskyttelse (Powerline protection, Oslo/Bergen2022)
 ID2TRAINID[14] = 1   # Ledning / Powerlines
 ID2TRAINID[15] = 1   # Mast / Transmission tower
+ID2TRAINID[16] = 1   # Wire-structure connector (Oslo)
 ID2TRAINID[17] = 1   # Bro (Bridge)
+ID2TRAINID[19] = 1   # Overhead structure (Oslo)
 ID2TRAINID[23] = 1   # Gress (Grass, Viken)
 ID2TRAINID[64] = 1   # Veldig lav vegetasjon (Very low veg, Oslo)
 

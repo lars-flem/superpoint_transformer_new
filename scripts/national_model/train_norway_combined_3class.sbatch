@@ -7,26 +7,26 @@
 #SBATCH --mem=120G
 #SBATCH --cpus-per-task=10
 
-#SBATCH --output=/cluster/home/jakobep/superpoint_transformer_new/logs/train/slurm_%x_%j.out
-#SBATCH --error=/cluster/home/jakobep/superpoint_transformer_new/logs/train/slurm_%x_%j.err
+#SBATCH --output=/cluster/home/larshfle/superpoint_transformer_new/logs/train/slurm_%x_%j.out
+#SBATCH --error=/cluster/home/larshfle/superpoint_transformer_new/logs/train/slurm_%x_%j.err
 
-#SBATCH --mail-user=jakobep@stud.ntnu.no
+#SBATCH --mail-user=larshfle@stud.ntnu.no
 #SBATCH --mail-type=ALL
 
 module purge
 
 source ~/.bashrc
-conda activate sptez
+conda activate spt
 
-cd /cluster/home/jakobep/superpoint_transformer_new
+cd /cluster/home/larshfle/superpoint_transformer_new
 
 # Uncomment to force re-preprocessing from raw files.
-# rm -rf /cluster/home/jakobep/datasets/norway_combined_3class/processed/
+# rm -rf /cluster/home/larshfle/datasets/norway_combined_3class/processed/
 
 python src/train.py \
     experiment=semantic/norway_combined_3class \
     datamodule=semantic/norway_combined_3class \
-    paths.data_dir=/cluster/home/jakobep/datasets/norway_combined_3class \
+    paths.data_dir=/cluster/home/larshfle/datasets/norway_combined_3class \
     trainer.check_val_every_n_epoch=5 \
     callbacks.model_checkpoint.save_last=True \
     callbacks.model_checkpoint.every_n_epochs=5 \

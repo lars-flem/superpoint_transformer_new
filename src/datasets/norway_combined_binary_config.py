@@ -35,15 +35,21 @@ ID2TRAINID[15] = 1   # Mast / Transmission tower
 ID2TRAINID[16] = 1   # Wire-structure connector (Oslo)
 ID2TRAINID[17] = 1   # Bro (Bridge)
 ID2TRAINID[19] = 1   # Overhead structure (Oslo)
-ID2TRAINID[23] = 1   # Gress (Grass, Viken)
-ID2TRAINID[64] = 1   # Veldig lav vegetasjon (Oslo)
 
 # Explicitly ignored
 ID2TRAINID[1] = 2    # Uklassifisert
 ID2TRAINID[7] = 2    # Støy
 ID2TRAINID[9] = 2    # Vann
 ID2TRAINID[22] = 2   # Temporal Exclusion (Oslo)
+ID2TRAINID[23] = 2   # Gress (Grass, Viken) — Viken's own low-grass class;
+                     # Bergen has no equivalent (puts same surface in ground
+                     # or unclassified), so ignored to avoid cross-region
+                     # label inconsistency.
 ID2TRAINID[24] = 2   # Snø
+ID2TRAINID[64] = 2   # Veldig lav vegetasjon (Oslo, 5–10cm) — Oslo's own
+                     # project report states this class contains a mix of
+                     # noise, unclassified, and vegetation, and Bergen/Viken
+                     # have no equivalent, so ignored.
 
 CLASS_NAMES = ["ground", "not_ground", "ignored"]
 CLASS_COLORS = [

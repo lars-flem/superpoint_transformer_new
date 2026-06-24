@@ -102,6 +102,7 @@ pip install plyfile
 pip install h5py
 pip install colorhash
 pip install seaborn
+pip install laspy[laszip]
 pip install numba
 pip install pytorch-lightning
 pip install pyrootutils
@@ -145,6 +146,7 @@ if [[ "$INSTALL_TORCHSPARSE" == true ]]; then
     pip install backports.cached-property
     pip install rootpath
     conda install -y google-sparsehash -c bioconda
+    export CPLUS_INCLUDE_PATH=$CONDA_PREFIX/include:$CPLUS_INCLUDE_PATH
     cd src/dependencies/torchsparse
     pip install .
     cd ../../../

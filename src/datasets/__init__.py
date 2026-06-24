@@ -5,3 +5,10 @@ from .kitti360 import *
 from .s3dis import *
 from .s3dis_room import *
 from .scannet import *
+from .norway_binary import *
+from .trondheim import *
+from .trondheim_multiclass import *
+from .norway_combined_3class import *
+from .norway_combined_binary import *
+from .gjerdrum import *
+from .bergen2022_steep_3class import *

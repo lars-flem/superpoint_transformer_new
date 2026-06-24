@@ -66,7 +66,7 @@ CLASS_COLORS = [
     [144, 238, 144],  # low_veg: light green
     [34, 139, 34],    # med_veg: medium green
     [0, 80, 0],       # high_veg: dark green
-    [255, 128, 0],    # bridge: orange
+    [200, 100, 0],    # bridge: orange
     [0, 0, 0],        # ignored: black
 ]
 

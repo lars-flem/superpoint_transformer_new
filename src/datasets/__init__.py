@@ -11,3 +11,4 @@ from .trondheim_multiclass import *
 from .norway_combined_3class import *
 from .norway_combined_binary import *
 from .gjerdrum import *
+from .bergen2022_steep_3class import *

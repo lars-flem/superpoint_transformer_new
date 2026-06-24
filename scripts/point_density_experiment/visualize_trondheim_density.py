@@ -32,16 +32,36 @@ CROP_RADIUS = 50
 
 # Each entry: (run_id, ckpt_dir, experiment, data_dir, xy_tiling).
 RUNS = [
-    ("trondheim30down_binary",
-     "2026-05-06_07-39-34",
-     "semantic/trondheim30down",
-     "/cluster/home/jakobep/datasets/trondheim30down",
-     2),
-    ("trondheim30down_multiclass",
-     "2026-05-06_10-02-51",
-     "semantic/trondheim30down_multiclass",
-     "/cluster/home/jakobep/datasets/trondheim30down_mc",
-     2),
+    # xy_tiling=2 binary
+    ("trondheim5_binary",             "2026-04-08_13-56-26", "semantic/trondheim5",                  "/cluster/home/jakobep/datasets/trondheim5",         2),
+    ("trondheim10_binary",            "2026-04-26_20-17-56", "semantic/trondheim10",                 "/cluster/home/jakobep/datasets/trondheim10",        2),
+    ("trondheim20_binary",            "2026-04-26_22-41-58", "semantic/trondheim20",                 "/cluster/home/jakobep/datasets/trondheim20",        2),
+    ("trondheim30_binary",            "2026-04-27_00-48-05", "semantic/trondheim30",                 "/cluster/home/jakobep/datasets/trondheim30",        2),
+    ("trondheim30down_binary",        "2026-05-06_07-39-34", "semantic/trondheim30down",             "/cluster/home/jakobep/datasets/trondheim30down",    2),
+    # xy_tiling=2 multiclass
+    # NOTE: trondheim5/10/20/30_multiclass xt=2 are skipped — their test
+    # pre_transform cache no longer matches what training used (the multiclass
+    # YAML was edited after April training, changing the hash key). Re-running
+    # would produce predictions that don't match the original test metrics.
+    # Keep their existing Apr-29 crops as-is. 30down_multiclass has intact
+    # cache from May and is safe to re-render.
+    # ("trondheim5_multiclass",         "2026-04-13_18-40-27", "semantic/trondheim5_multiclass",       "/cluster/home/jakobep/datasets/trondheim5_mc",      2),
+    # ("trondheim10_multiclass",        "2026-04-26_16-02-39", "semantic/trondheim10_multiclass",      "/cluster/home/jakobep/datasets/trondheim10_mc",     2),
+    # ("trondheim20_multiclass",        "2026-04-22_22-03-38", "semantic/trondheim20_multiclass",      "/cluster/home/jakobep/datasets/trondheim20_mc",     2),
+    # ("trondheim30_multiclass",        "2026-04-26_17-00-33", "semantic/trondheim30_multiclass",      "/cluster/home/jakobep/datasets/trondheim30_mc",     2),
+    ("trondheim30down_multiclass",    "2026-05-06_10-02-51", "semantic/trondheim30down_multiclass",  "/cluster/home/jakobep/datasets/trondheim30down_mc", 2),
+    # xy_tiling=3 binary
+    ("trondheim5_binary_xt3",         "2026-05-11_03-11-32", "semantic/trondheim5",                  "/cluster/home/jakobep/datasets/trondheim5",         3),
+    ("trondheim10_binary_xt3",        "2026-05-11_06-29-06", "semantic/trondheim10",                 "/cluster/home/jakobep/datasets/trondheim10",        3),
+    ("trondheim20_binary_xt3",        "2026-05-07_02-02-13", "semantic/trondheim20",                 "/cluster/home/jakobep/datasets/trondheim20",        3),
+    ("trondheim30_binary_xt3",        "2026-05-07_05-41-48", "semantic/trondheim30",                 "/cluster/home/jakobep/datasets/trondheim30",        3),
+    ("trondheim30down_binary_xt3",    "2026-05-07_11-07-10", "semantic/trondheim30down",             "/cluster/home/jakobep/datasets/trondheim30down",    3),
+    # xy_tiling=3 multiclass
+    ("trondheim5_multiclass_xt3",     "2026-05-11_09-01-37", "semantic/trondheim5_multiclass",       "/cluster/home/jakobep/datasets/trondheim5_mc",      3),
+    ("trondheim10_multiclass_xt3",    "2026-05-11_20-53-25", "semantic/trondheim10_multiclass",      "/cluster/home/jakobep/datasets/trondheim10_mc",     3),
+    ("trondheim20_multiclass_xt3",    "2026-05-07_15-12-47", "semantic/trondheim20_multiclass",      "/cluster/home/jakobep/datasets/trondheim20_mc",     3),
+    ("trondheim30_multiclass_xt3",    "2026-05-07_18-44-02", "semantic/trondheim30_multiclass",      "/cluster/home/jakobep/datasets/trondheim30_mc",     3),
+    ("trondheim30down_multiclass_xt3","2026-05-08_00-20-01", "semantic/trondheim30down_multiclass",  "/cluster/home/jakobep/datasets/trondheim30down_mc", 3),
 ]
 
 
@@ -63,6 +83,9 @@ def visualize_run(name, ckpt_run, experiment, data_dir, xy_tiling, device):
         f"datamodule.xy_tiling={xy_tiling}",
         "datamodule.mini=false",
         "datamodule.load_full_res_idx=true",
+        # Skip train/val dataset construction in both prepare_data and setup.
+        # We only need the test dataset for visualization.
+        "datamodule.prepare_only_test=true",
     ])
 
     datamodule = hydra.utils.instantiate(cfg.datamodule)
@@ -111,16 +134,28 @@ def visualize_run(name, ckpt_run, experiment, data_dir, xy_tiling, device):
     )
 
     full_path = os.path.join(OUT_DIR, f"{name}_full.html")
-    nag.show(
-        figsize=1600,
-        title=f"{name} — full sub-tile ({TEST_TILE})",
-        path=full_path,
-        display=False,
-        **common_kwargs,
-    )
-    print(f"  wrote: {full_path}")
+    if os.path.exists(full_path):
+        print(f"  skipping full (already exists): {full_path}")
+    else:
+        nag.show(
+            figsize=1600,
+            title=f"{name} — full sub-tile ({TEST_TILE})",
+            path=full_path,
+            display=False,
+            **common_kwargs,
+        )
+        print(f"  wrote: {full_path}")
 
-    center = nag[0].pos.mean(dim=0).view(1, -1)
+    # Fixed local-frame crop center (XY chosen to match the patch we want
+    # across all density variants). Z uses the per-run mean so the crop sits
+    # at the right elevation regardless of the local-frame Z offset.
+    pos = nag[0].pos
+    mean_z = pos[:, 2].mean()
+    center = torch.tensor(
+        [[-90.0, 132.0, float(mean_z)]],
+        dtype=pos.dtype,
+        device=pos.device,
+    )
     crop_path = os.path.join(OUT_DIR, f"{name}_crop.html")
     nag.show(
         figsize=1600,

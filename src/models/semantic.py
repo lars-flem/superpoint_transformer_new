@@ -1015,6 +1015,24 @@ class SemanticSegmentationModule(LightningModule):
                     f"test/{prefix}cm": wandb_confusion_matrix(
                         epoch_cm.confmat, class_names=self.class_names)})
 
+            # Persist the test confusion matrix to disk so per-class
+            # precision/recall can be recovered post-hoc.
+            try:
+                out_dir = self.trainer.default_root_dir
+                if self.logger is not None and getattr(self.logger, 'save_dir', None):
+                    out_dir = self.logger.save_dir
+                cm_path = os.path.join(out_dir, f"test_{prefix}confmat.pt")
+                torch.save(
+                    {
+                        "confmat": epoch_cm.confmat.detach().cpu(),
+                        "class_names": list(self.class_names),
+                    },
+                    cm_path,
+                )
+                log.info(f"Saved test confusion matrix to {cm_path}")
+            except Exception as e:
+                log.warning(f"Failed to save test confusion matrix: {e}")
+
         # Reset metrics accumulated over the last epoch
         cm.reset()
         epoch_cm.reset()

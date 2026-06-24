@@ -45,6 +45,30 @@ it means a lot to us !**
 
 <br>
 
+> ## 🇳🇴 About this fork
+>
+> This fork extends Superpoint Transformer with changes developed as part of a
+> Master's thesis at the **Norwegian University of Science and Technology
+> (NTNU)** on semantic segmentation of Norwegian airborne LiDAR.
+>
+> **What's on `master`:** general-purpose contributions only — 10 robustness
+> fixes for empty / degenerate inputs (see [`ROBUSTNESS_IMPROVEMENTS.md`](ROBUSTNESS_IMPROVEMENTS.md)),
+> a [`SETUP_GUIDE.md`](SETUP_GUIDE.md) for plugging in custom datasets, a
+> per-class metrics reporting utility (`scripts/report_per_class_metrics.py`
+> + confusion-matrix persistence in `src/models/semantic.py`), `install.sh`
+> tweaks for `laspy[laszip]` and TorchSparse, and an example notebook
+> ([`notebooks/norway_binary_model.ipynb`](notebooks/norway_binary_model.ipynb))
+> demonstrating binary classification on Norwegian ALS data.
+>
+> **Everything else** — Norwegian dataset adapters (Viken 2022, Trondheim
+> density variants, Gjerdrum, Bergen 2022 steep, combined-region models),
+> their Hydra configs, the SLURM training scripts, visualization tools, and
+> thesis-specific notebooks — lives on the
+> [`experiment-configs-and-scripts`](../../tree/experiment-configs-and-scripts)
+> branch, which is `master` plus those experiment-specific files.
+
+<br>
+
 ## 📌  Description
 
 ### Superpoint Transformer

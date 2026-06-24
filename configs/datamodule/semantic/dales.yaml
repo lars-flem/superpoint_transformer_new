@@ -6,7 +6,7 @@ _target_: src.datamodules.dales.DALESDataModule
 
 # These parameters are not actually used by the DataModule, but are used
 # here to facilitate model parameterization with config interpolation
-num_classes: 8
+num_classes: 2
 stuff_classes: [0, 1]
 trainval: True
 val_on_test: True

@@ -1,3 +1,4 @@
+import logging
 import torch
 from src.transforms import Transform
 from src.utils.neighbors import knn_1, inliers_split, \
@@ -53,6 +54,28 @@ class KNN(Transform):
     def _process(self, data):
         # Mechanism to skip the transform if needed
         if self.r_max <= 0 or self.k <= 0:
+            return data
+        
+        # Skip empty point clouds (e.g., from empty XY tiles)
+        if data.pos.shape[0] == 0:
+            logger = logging.getLogger(__name__)
+            logger.warning(
+                f"{self.__class__.__name__}: Skipping empty point cloud "
+                f"(0 points). Initializing empty neighbor tensors.")
+
+            empty_shape = (0, self.k)
+            data.neighbor_index = torch.empty(
+                empty_shape, dtype=torch.long, device=data.pos.device)
+            data.neighbor_distance = torch.empty(
+                empty_shape, dtype=data.pos.dtype, device=data.pos.device)
+
+            if self.save_as_csr:
+                data.neighbors = CSRData(
+                    torch.zeros(1, dtype=torch.long, device=data.pos.device),
+                    torch.empty(0, dtype=torch.long, device=data.pos.device),
+                    torch.empty(0, dtype=data.pos.dtype, device=data.pos.device),
+                    is_index_value=[True, False])
+
             return data
         
         neighbors, distances = knn_1(
@@ -155,6 +178,14 @@ class Inliers(Transform):
         self.update_super = update_super
 
     def _process(self, data):
+        # Skip empty point clouds (e.g., from empty XY tiles)
+        if data.pos.shape[0] == 0:
+            logger = logging.getLogger(__name__)
+            logger.warning(
+                f"{self.__class__.__name__}: Skipping empty point cloud "
+                f"(0 points). Returning data unchanged.")
+            return data
+        
         # Actual outlier search, optionally recursive
         idx = inliers_split(
             data.pos, data.pos, self.k_min, r_max=self.r_max,
@@ -185,6 +216,14 @@ class Outliers(Transform):
         self.update_super = update_super
 
     def _process(self, data):
+        # Skip empty point clouds (e.g., from empty XY tiles)
+        if data.pos.shape[0] == 0:
+            logger = logging.getLogger(__name__)
+            logger.warning(
+                f"{self.__class__.__name__}: Skipping empty point cloud "
+                f"(0 points). Returning data unchanged.")
+            return data
+        
         # Actual outlier search, optionally recursive
         idx = outliers_split(
             data.pos, data.pos, self.k_min, r_max=self.r_max,

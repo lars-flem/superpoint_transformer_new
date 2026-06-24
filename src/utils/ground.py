@@ -111,13 +111,33 @@ def single_plane_model(pos, random_state=0, residual_threshold=1e-3):
         Residual threshold for RANSAC
     :return:
     """
+
+    if len(pos)<3:
+        print("#"*100)
+        print("RAnzac wont work i simply create two extra points by copying the first point while adding to the x and y value")
+        # Take the first point
+        first_point = pos[0].unsqueeze(0).clone()
+        another_copy = first_point.clone()
+
+        #update the x and y values 
+        first_point[0][0]+=10
+        first_point[0][1]+=10
+        another_copy[0][0]-=10
+        another_copy[0][1]-=10
+
+        #apend the midified copy of the points
+        pos= torch.cat([pos,first_point,another_copy])
+        print("pos after adding two new points:"+str(pos))
+        print("#"*100)
+
     assert is_xyz_tensor(pos)
 
-    if pos.is_cpu:
-        xy = pos[:, :2].cpu().numpy()
-        z = pos[:, 2].cpu().numpy()
+    # if pos.is_cpu:
+    xy = pos[:, :2].cpu().numpy()
+    z = pos[:, 2].cpu().numpy()
 
-        # Search the ground plane using RANSAC
+    # Search the ground plane using RANSAC
+    try:
         ransac = RANSACRegressor(
             random_state=random_state,
             residual_threshold=residual_threshold).fit(
@@ -130,23 +150,37 @@ def single_plane_model(pos, random_state=0, residual_threshold=1e-3):
             z = pos_query[:, 2]
             return z - torch.from_numpy(ransac.predict(xy.cpu().numpy())).to(device)
 
-    else:
-        result = plane_fit(
-            pts=pos,
-            thresh=residual_threshold,
-            max_iterations=100,
-            iterations_per_batch=100,
-            epsilon=1e-8,
-            device=pos.device)
-
-        # result.equation holds: [a, b, c, d] for ax + by + cz + d = 0
-        w = result.equation[:-1]
-        b = result.equation[-1]
+    except ValueError:
+        # RANSAC failed (e.g. all ground candidates share the same XY
+        # coordinates).  Fall back to a horizontal plane at the mean Z of
+        # the candidate ground points.
+        z_mean = float(z.mean())
+        print(
+            f"WARNING: RANSAC could not find a valid consensus set. "
+            f"Falling back to a flat ground plane at z={z_mean:.3f}.")
 
         def predict_elevation(pos_query):
             assert is_xyz_tensor(pos_query)
-            delta_z = (torch.matmul(pos_query, w) + b) / w[2]
-            return delta_z
+            z_query = pos_query[:, 2]
+            return z_query - z_mean
+
+    # else:
+    #     result = plane_fit(
+    #         pts=pos,
+    #         thresh=residual_threshold,
+    #         max_iterations=100,
+    #         iterations_per_batch=100,
+    #         epsilon=1e-8,
+    #         device=pos.device)
+
+    #     # result.equation holds: [a, b, c, d] for ax + by + cz + d = 0
+    #     w = result.equation[:-1]
+    #     b = result.equation[-1]
+
+    #     def predict_elevation(pos_query):
+    #         assert is_xyz_tensor(pos_query)
+    #         delta_z = (torch.matmul(pos_query, w) + b) / w[2]
+    #         return delta_z
 
     return predict_elevation
 

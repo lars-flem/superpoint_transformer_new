@@ -1,0 +1,34 @@
+# @package datamodule
+defaults:
+  - /datamodule/semantic/norway_binary.yaml # General dataset parameters (metadata, augmentations)
+  - /datamodule/partition/norway_ezsp.yaml # Partition parameters (same as used in stage 1)
+  - /datamodule/semantic/default_ezsp.yaml # Semantic task parameters for EZ-SP
+
+# ============================================================================
+# IMPORTANT: Fill in the path to your Stage 1 checkpoint!
+# Run: python src/train.py experiment=partition/norway_ezsp ...
+# Then set pretrained_cnn_ckpt_path to the checkpoint path (e.g., logs/train/runs/<date>/checkpoints/last.ckpt)
+# ============================================================================
+# pretrained_cnn_ckpt_path: ???  # <-- UNCOMMENT AND SET THIS!
+
+# CNN architecture from Stage 1 (must match what you trained)
+pretrained_cnn_dim_without_in_dim: [32, 32, 32]
+pretrained_cnn_kernel_size: [7, 3, 3]
+
+# Parameter defining partition levels for semantic segmentation
+# Stage 1 used [10], but for semantic we want multiple levels for the transformer
+contour_prior_min_size: [5, 15, 70]
+
+# Inputs to the CNN (same as Stage 1)
+partition_hf:
+- 'intensity'
+
+# Additional features concatenated AFTER the CNN
+post_cnn_point_hf:
+- 'intensity'
+- 'elevation'
+
+# No RGB in Norway data - disable augmentations
+rgb_jitter: 0.0 
+rgb_autocontrast: 0.0
+rgb_drop: 0.0

@@ -1,0 +1,30 @@
+# @package _global_
+
+# to execute this experiment run:
+# sbatch scripts/train_norway_combined_3class.sbatch
+
+defaults:
+  - override /datamodule: semantic/norway_combined_3class.yaml
+  - override /model: semantic/spt-2.yaml
+  - override /trainer: gpu.yaml
+
+datamodule:
+  xy_tiling: 3
+
+callbacks:
+  gradient_accumulator:
+    scheduling:
+      0: 2
+
+trainer:
+  max_epochs: 400
+
+model:
+  optimizer:
+    lr: 0.01
+    weight_decay: 1e-4
+
+logger:
+  wandb:
+    project: "spt_norway_combined"
+    name: "SPT-64-3class"

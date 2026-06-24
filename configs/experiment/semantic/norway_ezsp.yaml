@@ -1,0 +1,42 @@
+# @package _global_
+
+defaults:
+  - /model/semantic/spt-3.yaml # SPT on 3 superpoint partition levels
+  - /model/semantic/_point_cnn.yaml # EZ-SP uses a CNN in the first stage
+  - /experiment/semantic/default_ezsp.yaml
+  - override /datamodule: semantic/norway_ezsp.yaml
+  - override /trainer: gpu.yaml
+
+# ===========================================================================
+# Norway Binary EZSP - Stage 2: Semantic Segmentation
+# 
+# PREREQUISITE: You must first train Stage 1 (partition learning):
+#   python src/train.py experiment=partition/norway_ezsp paths.data_dir=...
+#
+# Then run Stage 2 with the checkpoint path:
+#   python src/train.py experiment=semantic/norway_ezsp \
+#       datamodule.pretrained_cnn_ckpt_path=/path/to/stage1/last.ckpt \
+#       paths.data_dir=...
+# ===========================================================================
+
+trainer:
+  max_epochs: 200
+  check_val_every_n_epoch: 10
+
+model:
+  optimizer:
+    lr: 0.005
+    weight_decay: 1e-4
+
+  criterion:
+    _target_: src.loss.focal.WeightedFocalLoss
+    gamma: 2
+
+  net:
+    no_ffn: False
+    down_ffn_ratio: 1
+
+logger:
+  wandb:
+    project: norway_ezsp
+    name: semantic

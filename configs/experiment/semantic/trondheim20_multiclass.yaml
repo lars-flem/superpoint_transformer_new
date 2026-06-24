@@ -1,0 +1,30 @@
+# @package _global_
+
+# to execute this experiment run:
+# python src/train.py experiment=semantic/trondheim20_multiclass
+
+defaults:
+  - override /datamodule: semantic/trondheim_multiclass.yaml
+  - override /model: semantic/spt-2.yaml
+  - override /trainer: gpu.yaml
+
+datamodule:
+  xy_tiling: 3
+
+callbacks:
+  gradient_accumulator:
+    scheduling:
+      0: 2
+
+trainer:
+  max_epochs: 400
+
+model:
+  optimizer:
+    lr: 0.01
+    weight_decay: 1e-4
+
+logger:
+  wandb:
+    project: "spt_trondheim_multiclass"
+    name: "SPT-64-20pkt"

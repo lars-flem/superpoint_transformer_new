@@ -1,0 +1,34 @@
+# @package _global_
+
+# to execute this experiment run:
+# python src/train.py experiment=semantic/viken2022 datamodule=semantic/viken2022
+
+defaults:
+  - override /datamodule: semantic/viken2022.yaml
+  - override /model: semantic/spt-2.yaml
+  - override /trainer: gpu.yaml
+
+# all parameters below will be merged with parameters from default
+# configurations set above.
+
+datamodule:
+  xy_tiling: 2
+
+callbacks:
+  gradient_accumulator:
+    scheduling:
+      0:
+        2
+
+trainer:
+  max_epochs: 400
+
+model:
+  optimizer:
+    lr: 0.01
+    weight_decay: 1e-4
+
+logger:
+  wandb:
+    project: "spt_viken2022"
+    name: "SPT-64"

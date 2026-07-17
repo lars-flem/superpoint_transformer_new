@@ -173,3 +173,4 @@ ckpt
 outputs
 wandb
 visualizations/*
+output_pipeline/*

@@ -53,7 +53,9 @@ ID2TRAINID[64] = 3   # Veldig lav vegetasjon (Oslo, 5–10cm) — Oslo's own
                      # have no equivalent, so ignored.
 ID2TRAINID[9] = 3    # Vann (Water)
 ID2TRAINID[22] = 3   # Temporal Exclusion (Oslo)
+ID2TRAINID[23] = 3   # Gress (Grass, Viken)
 ID2TRAINID[24] = 3   # Snø (Snow)
+ID2TRAINID[64] = 3   # Veldig lav vegetasjon (Very low veg, Oslo)
 
 CLASS_NAMES = ["ground", "not_ground", "building", "ignored"]
 CLASS_COLORS = [
